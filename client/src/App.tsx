@@ -94,7 +94,12 @@ function App() {
 	}
 
 	async function handleSignOut() {
-		await signOut(auth);
+		try {
+			setAuthError('');
+			await signOut(auth);
+		} catch (_error) {
+			setAuthError('Sign-out failed. Please try again.');
+		}
 	}
 
 	if (!authReady) {
