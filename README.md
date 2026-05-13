@@ -18,7 +18,8 @@ bun run setup
 bun dev
 ```
 
-The Vite dev server runs on `http://localhost:5173` and proxies `/api` requests to the Express server on `http://localhost:3000`.
+The Vite dev server runs on `http://localhost:5173` and proxies `/api` requests to the Express server.
+The Express server runs on `http://localhost:3000` and only for API responses.
 
 ## Project Structure
 
