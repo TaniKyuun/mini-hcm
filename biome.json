@@ -1,0 +1,43 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"client/**/*",
+			"server/**/*",
+			"**/src/**/*",
+			"**/index.html",
+			"**/.vscode/**/*",
+			"**/vite.config.ts",
+			"!**/src/global.css"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}

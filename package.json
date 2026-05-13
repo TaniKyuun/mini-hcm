@@ -1,0 +1,24 @@
+{
+	"name": "mini-hcm",
+	"version": "0.0.0",
+	"description": "A light-weight Human Capital Management Time-In/Time-Out system",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"dev": "bun concurrently \"cd server && bun dev\" \"bunx wait-on http://localhost:3000 && cd client && bun dev\"",
+		"setup": "bun install && bun setup:client && bun setup:server",
+		"setup:client": "cd client && bun install",
+		"setup:server": "cd server && bun install",
+		"lint": "biome lint",
+		"format": "biome format",
+		"check": "biome check . --reporter=github",
+		"lint:staged": "biome lint --apply --files-ignore=\"dist/**\""
+	},
+	"dependencies": {
+		"concurrently": "^9.2.1",
+		"wait-on": "^9.0.10"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.15"
+	}
+}
