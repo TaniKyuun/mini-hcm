@@ -6,7 +6,11 @@
 	"words": [
 		"adminsdk",
 		"bunx",
-		"firestore"
+		"firestore",
+		"fontsource",
+		"Merriweather",
+		"oklch",
+		"shadcn"
 	],
 	"ignoreWords": [],
 	"import": []
