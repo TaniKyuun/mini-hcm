@@ -19,6 +19,7 @@
 		"wait-on": "^9.0.10"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.15"
+		"@biomejs/biome": "2.4.15",
+		"firebase-tools": "^15.18.0"
 	}
 }

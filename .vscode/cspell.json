@@ -3,7 +3,11 @@
 	"ignorePaths": [],
 	"dictionaryDefinitions": [],
 	"dictionaries": [],
-	"words": ["adminsdk", "bunx"],
+	"words": [
+		"adminsdk",
+		"bunx",
+		"firestore"
+	],
 	"ignoreWords": [],
 	"import": []
 }
