@@ -1,5 +1,5 @@
 import { UserPlusIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -81,16 +81,13 @@ export function AddEmployeeDialog({
 		}
 	}, [open]);
 
-	const fieldErrors = useMemo(
-		() => ({
-			name: validateName(name) ?? undefined,
-			email: validateEmail(email) ?? undefined,
-			password: validatePassword(password) ?? undefined,
-			timezone: validateTimezone(timezone) ?? undefined,
-			...validateSchedule(startTime, endTime, workingDays),
-		}),
-		[name, email, password, timezone, startTime, endTime, workingDays],
-	);
+	const fieldErrors = {
+		name: validateName(name) ?? undefined,
+		email: validateEmail(email) ?? undefined,
+		password: validatePassword(password) ?? undefined,
+		timezone: validateTimezone(timezone) ?? undefined,
+		...validateSchedule(startTime, endTime, workingDays),
+	};
 	const formInvalid = hasErrors(fieldErrors);
 
 	function toggleWorkingDay(day: number) {

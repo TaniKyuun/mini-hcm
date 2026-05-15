@@ -1,9 +1,4 @@
-import {
-	type DocumentReference,
-	FieldValue,
-	type Timestamp,
-	type WriteBatch,
-} from 'firebase-admin/firestore';
+import { FieldValue, type Timestamp } from 'firebase-admin/firestore';
 import { NOTIFICATIONS_COLLECTION } from '../lib/constants';
 import { getFirestoreDb } from '../lib/firebase';
 import type {
@@ -12,27 +7,14 @@ import type {
 	NotificationType,
 } from '../types/models';
 
-/**
- * Optional batch context for callers that want to commit the notification write
- * atomically with another mutation (e.g. an edit-request status flip). When
- * passed, the caller is responsible for `batch.commit()`.
- */
-export type NotificationWriteContext = {
-	batch: WriteBatch;
-	ref: DocumentReference;
-};
-
-export async function createNotification(
-	input: {
-		recipientUid: string;
-		actorUid: string;
-		type: NotificationType;
-		title: string;
-		body: string;
-		metadata?: NotificationMetadata;
-	},
-	ctx?: NotificationWriteContext,
-): Promise<string> {
+export async function createNotification(input: {
+	recipientUid: string;
+	actorUid: string;
+	type: NotificationType;
+	title: string;
+	body: string;
+	metadata?: NotificationMetadata;
+}): Promise<string> {
 	const db = getFirestoreDb();
 	const doc: NotificationDoc = {
 		recipientUid: input.recipientUid,
@@ -45,10 +27,6 @@ export async function createNotification(
 	};
 	if (input.metadata) {
 		doc.metadata = input.metadata;
-	}
-	if (ctx) {
-		ctx.batch.set(ctx.ref, doc);
-		return ctx.ref.id;
 	}
 	const ref = await db.collection(NOTIFICATIONS_COLLECTION).add(doc);
 	return ref.id;

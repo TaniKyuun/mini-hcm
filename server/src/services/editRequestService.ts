@@ -2,7 +2,6 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	EDIT_REQUESTS_COLLECTION,
-	NOTIFICATIONS_COLLECTION,
 } from '../lib/constants';
 import { getFirestoreDb } from '../lib/firebase';
 import type {
@@ -69,41 +68,44 @@ export async function createEditRequest(
 		);
 	}
 
-	// Disallow stacking pending requests on the same record.
-	const existing = await db
+	// Compare-and-set inside a transaction so two concurrent submissions for the
+	// same attendance can't both pass the "no pending" check and both insert.
+	const newRef = db.collection(EDIT_REQUESTS_COLLECTION).doc();
+	const pendingQuery = db
 		.collection(EDIT_REQUESTS_COLLECTION)
 		.where('attendanceId', '==', input.attendanceId)
 		.where('status', '==', 'pending')
-		.limit(1)
-		.get();
-	if (!existing.empty) {
-		throw new ValidationError(
-			'A pending edit request already exists for this record.',
-			'attendanceId',
-		);
-	}
-
-	const ref = await db.collection(EDIT_REQUESTS_COLLECTION).add({
-		attendanceId: input.attendanceId,
-		requesterUid: input.requesterUid,
-		date: attendance.date,
-		originalTimeIn: attendance.timeIn.toDate().toISOString(),
-		originalTimeOut: attendance.timeOut
-			? attendance.timeOut.toDate().toISOString()
-			: null,
-		requestedTimeIn,
-		requestedTimeOut,
-		reason,
-		status: 'pending',
-		createdAt: FieldValue.serverTimestamp(),
-		resolvedAt: null,
-		resolvedBy: null,
-		adminNote: null,
+		.limit(1);
+	await db.runTransaction(async (tx) => {
+		const existing = await tx.get(pendingQuery);
+		if (!existing.empty) {
+			throw new ValidationError(
+				'A pending edit request already exists for this record.',
+				'attendanceId',
+			);
+		}
+		tx.create(newRef, {
+			attendanceId: input.attendanceId,
+			requesterUid: input.requesterUid,
+			date: attendance.date,
+			originalTimeIn: attendance.timeIn.toDate().toISOString(),
+			originalTimeOut: attendance.timeOut
+				? attendance.timeOut.toDate().toISOString()
+				: null,
+			requestedTimeIn,
+			requestedTimeOut,
+			reason,
+			status: 'pending',
+			createdAt: FieldValue.serverTimestamp(),
+			resolvedAt: null,
+			resolvedBy: null,
+			adminNote: null,
+		});
 	});
 
 	// Synthesize the return locally — avoids re-reading what we just wrote.
 	return {
-		id: ref.id,
+		id: newRef.id,
 		attendanceId: input.attendanceId,
 		requesterUid: input.requesterUid,
 		date: attendance.date,
@@ -161,9 +163,16 @@ export async function getEditRequest(
 }
 
 /**
- * Approving applies the requested change via `adminUpdateAttendance` (so the
- * normal compute + summary + notify pipeline runs), then flips the request to
- * `approved` and notifies the employee.
+ * Approving compare-and-sets the request to `approved` inside a transaction so
+ * two admins clicking simultaneously can't both pass the pending check and
+ * both apply the same edit. Side effects (attendance update + notification)
+ * run after the transaction commits.
+ *
+ * Trade-off: if `adminUpdateAttendance` fails after the transaction, the
+ * request stays `approved` but the attendance change isn't applied — a retry
+ * is blocked by the pending check. This is preferable to the prior behavior
+ * where a retry would silently re-apply the same edit (duplicate audit-log
+ * entry).
  */
 export async function approveEditRequest(
 	id: string,
@@ -174,17 +183,32 @@ export async function approveEditRequest(
 	const db = getFirestoreDb();
 	const ref = db.collection(EDIT_REQUESTS_COLLECTION).doc(id);
 
-	const snap = await ref.get();
-	if (!snap.exists) {
-		throw new NotFoundError('Edit request not found.');
-	}
-	const data = snap.data() as AttendanceEditRequestDoc;
-	if (data.status !== 'pending') {
-		throw new ValidationError(`Request is already ${data.status}.`, 'status');
-	}
+	const data = await db.runTransaction(async (tx) => {
+		const snap = await tx.get(ref);
+		if (!snap.exists) {
+			throw new NotFoundError('Edit request not found.');
+		}
+		const current = snap.data() as AttendanceEditRequestDoc;
+		if (current.status !== 'pending') {
+			throw new ValidationError(
+				`Request is already ${current.status}.`,
+				'status',
+			);
+		}
+		tx.update(ref, {
+			status: 'approved',
+			resolvedAt: FieldValue.serverTimestamp(),
+			resolvedBy: adminUid,
+			adminNote: note,
+		});
+		return current;
+	});
 
-	// Apply the requested change. Any ValidationError thrown here (e.g. timeOut
-	// <= timeIn after recompute) will bubble to the route → 400.
+	const resolvedAt = Timestamp.now();
+
+	// Side effects after commit. ValidationError from adminUpdateAttendance
+	// (e.g. timeOut <= timeIn after recompute) still bubbles to the route → 400,
+	// but the request is already marked `approved` at that point.
 	await adminUpdateAttendance(
 		data.attendanceId,
 		{
@@ -198,32 +222,16 @@ export async function approveEditRequest(
 		adminUid,
 	);
 
-	// Commit the request status flip + employee notification atomically — without
-	// this, a notification-write failure left the request `approved` with no
-	// notice to the employee.
-	const resolvedAt = Timestamp.now();
-	const batch = db.batch();
-	batch.update(ref, {
-		status: 'approved',
-		resolvedAt: FieldValue.serverTimestamp(),
-		resolvedBy: adminUid,
-		adminNote: note,
+	await createNotification({
+		recipientUid: data.requesterUid,
+		actorUid: adminUid,
+		type: 'edit_request_approved',
+		title: 'Your time-entry change was approved',
+		body: note
+			? `Admin note: ${note}`
+			: 'Your requested clock-in/clock-out change has been applied.',
+		metadata: { attendanceId: data.attendanceId, date: data.date },
 	});
-	const notifRef = db.collection(NOTIFICATIONS_COLLECTION).doc();
-	await createNotification(
-		{
-			recipientUid: data.requesterUid,
-			actorUid: adminUid,
-			type: 'edit_request_approved',
-			title: 'Your time-entry change was approved',
-			body: note
-				? `Admin note: ${note}`
-				: 'Your requested clock-in/clock-out change has been applied.',
-			metadata: { attendanceId: data.attendanceId, date: data.date },
-		},
-		{ batch, ref: notifRef },
-	);
-	await batch.commit();
 
 	// Synthesize the return locally — avoids re-reading what we just wrote.
 	return {
@@ -245,38 +253,39 @@ export async function rejectEditRequest(
 	const db = getFirestoreDb();
 	const ref = db.collection(EDIT_REQUESTS_COLLECTION).doc(id);
 
-	const snap = await ref.get();
-	if (!snap.exists) {
-		throw new NotFoundError('Edit request not found.');
-	}
-	const data = snap.data() as AttendanceEditRequestDoc;
-	if (data.status !== 'pending') {
-		throw new ValidationError(`Request is already ${data.status}.`, 'status');
-	}
+	const data = await db.runTransaction(async (tx) => {
+		const snap = await tx.get(ref);
+		if (!snap.exists) {
+			throw new NotFoundError('Edit request not found.');
+		}
+		const current = snap.data() as AttendanceEditRequestDoc;
+		if (current.status !== 'pending') {
+			throw new ValidationError(
+				`Request is already ${current.status}.`,
+				'status',
+			);
+		}
+		tx.update(ref, {
+			status: 'rejected',
+			resolvedAt: FieldValue.serverTimestamp(),
+			resolvedBy: adminUid,
+			adminNote: note,
+		});
+		return current;
+	});
 
 	const resolvedAt = Timestamp.now();
-	const batch = db.batch();
-	batch.update(ref, {
-		status: 'rejected',
-		resolvedAt: FieldValue.serverTimestamp(),
-		resolvedBy: adminUid,
-		adminNote: note,
+
+	await createNotification({
+		recipientUid: data.requesterUid,
+		actorUid: adminUid,
+		type: 'edit_request_rejected',
+		title: 'Your time-entry change was rejected',
+		body: note
+			? `Admin note: ${note}`
+			: 'Your requested clock-in/clock-out change was not applied.',
+		metadata: { attendanceId: data.attendanceId, date: data.date },
 	});
-	const notifRef = db.collection(NOTIFICATIONS_COLLECTION).doc();
-	await createNotification(
-		{
-			recipientUid: data.requesterUid,
-			actorUid: adminUid,
-			type: 'edit_request_rejected',
-			title: 'Your time-entry change was rejected',
-			body: note
-				? `Admin note: ${note}`
-				: 'Your requested clock-in/clock-out change was not applied.',
-			metadata: { attendanceId: data.attendanceId, date: data.date },
-		},
-		{ batch, ref: notifRef },
-	);
-	await batch.commit();
 
 	// Synthesize the return locally — avoids re-reading what we just wrote.
 	return {

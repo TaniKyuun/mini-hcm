@@ -1,5 +1,5 @@
 import { PencilIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -93,15 +93,12 @@ export function EditEmployeeDialog({
 		);
 	}
 
-	const fieldErrors = useMemo(
-		() => ({
-			name: validateName(name) ?? undefined,
-			email: validateEmail(email) ?? undefined,
-			timezone: validateTimezone(timezone) ?? undefined,
-			...validateSchedule(startTime, endTime, workingDays),
-		}),
-		[name, email, timezone, startTime, endTime, workingDays],
-	);
+	const fieldErrors = {
+		name: validateName(name) ?? undefined,
+		email: validateEmail(email) ?? undefined,
+		timezone: validateTimezone(timezone) ?? undefined,
+		...validateSchedule(startTime, endTime, workingDays),
+	};
 	const formInvalid = hasErrors(fieldErrors);
 
 	function handleSave() {
