@@ -110,13 +110,23 @@ const getHistoryHandler: RequestHandler<
 	}
 };
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidDate(s: string): boolean {
+	return ISO_DATE_RE.test(s) && Number.isFinite(Date.parse(s));
+}
+
 function resolveDateRange(query: HistoryQuery): {
 	startDate: string;
 	endDate: string;
 } {
 	const today = new Date().toISOString().slice(0, 10);
-	const endDate = query.endDate ?? today;
-	const startDate = query.startDate ?? subtractDays(endDate, 30);
+	const endDate =
+		query.endDate && isValidDate(query.endDate) ? query.endDate : today;
+	const startDate =
+		query.startDate && isValidDate(query.startDate)
+			? query.startDate
+			: subtractDays(endDate, 30);
 	return { startDate, endDate };
 }
 
