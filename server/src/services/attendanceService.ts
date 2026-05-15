@@ -161,6 +161,9 @@ export async function adminUpdateAttendance(
 		throw new NotFoundError('User profile not found for this attendance.');
 	}
 
+	if (!existing.timeIn) {
+		throw new Error('Corrupted attendance record: missing timeIn.');
+	}
 	const prevTimeIn = existing.timeIn.toDate();
 	const prevTimeOut = existing.timeOut?.toDate() ?? null;
 	const nextTimeIn = parseDateOrThrow(input.timeIn, prevTimeIn);
