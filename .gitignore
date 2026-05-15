@@ -24,3 +24,10 @@ dist-ssr
 
 # Documentations
 .docs/personal
+
+# Skills.sh
+.skills/firebase-basics
+.skills/firebase-store
+.skills/nodejs-express-server
+.skills/react-best-practices
+.skills/vercel-react-best-practices

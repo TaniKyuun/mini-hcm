@@ -23,7 +23,7 @@
       "source": "vercel-labs/vercel-plugin",
       "sourceType": "github",
       "skillPath": "skills/react-best-practices/SKILL.md",
-      "computedHash": "bdb13a3a239c067136b39cf77a34462ccc0dd4645d440362182409dcfd331221"
+      "computedHash": "93ac57773ae23a5ea4c75dcd119b0f4def98a63084388be18231824d6980ad99"
     },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
