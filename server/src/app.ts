@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { adminRouter } from './routes/admin';
@@ -10,6 +11,17 @@ import { usersRouter } from './routes/users';
 
 export function createApp() {
 	const app = express();
+
+	const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',')
+		.map((o) => o.trim())
+		.filter(Boolean);
+
+	app.use(
+		cors({
+			origin: allowedOrigins?.length ? allowedOrigins : true,
+			credentials: true,
+		}),
+	);
 
 	app.use(express.json());
 

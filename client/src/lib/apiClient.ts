@@ -1,5 +1,7 @@
 import type { User } from 'firebase/auth';
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
 export class ApiError extends Error {
 	status: number;
 
@@ -32,7 +34,9 @@ export async function apiRequest<T>(
 		body = JSON.stringify(options.body);
 	}
 
-	const response = await fetch(path, {
+	const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
+
+	const response = await fetch(url, {
 		method: options.method ?? 'GET',
 		headers,
 		body,
