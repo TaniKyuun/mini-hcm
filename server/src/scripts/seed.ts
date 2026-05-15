@@ -1,5 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { type BulkWriter, FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,
@@ -10,12 +10,10 @@ import {
 import { getFirebaseAuth, getFirestoreDb } from '../lib/firebase';
 import { isWorkingDay } from '../lib/workingDays';
 import { computeHours } from '../services/computeService';
-import { createNotification } from '../services/notificationService';
 import type {
 	AttendanceDoc,
 	EmploymentType,
 	UserLocation,
-	UserProfile,
 	UserRole,
 	UserSchedule,
 } from '../types/models';
@@ -145,7 +143,7 @@ async function upsertAuthUser(user: SeedUser): Promise<void> {
 	});
 }
 
-async function upsertProfile(user: SeedUser): Promise<UserProfile> {
+function upsertProfile(user: SeedUser, writer: BulkWriter): void {
 	const db = getFirestoreDb();
 	const ref = db.collection(USERS_COLLECTION).doc(user.uid);
 
@@ -161,9 +159,7 @@ async function upsertProfile(user: SeedUser): Promise<UserProfile> {
 		createdAt: FieldValue.serverTimestamp(),
 	};
 
-	await ref.set(profile, { merge: true });
-	const snapshot = await ref.get();
-	return snapshot.data() as UserProfile;
+	writer.set(ref, profile, { merge: true });
 }
 
 function pastDate(daysAgo: number, timezone: string): string {
@@ -193,7 +189,7 @@ function jitter(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function seedAttendanceForUser(user: SeedUser): Promise<number> {
+function seedAttendanceForUser(user: SeedUser, writer: BulkWriter): number {
 	const db = getFirestoreDb();
 	const [startH, startM] = parseHM(user.schedule.start);
 	const [endH, endM] = parseHM(user.schedule.end);
@@ -233,7 +229,7 @@ async function seedAttendanceForUser(user: SeedUser): Promise<number> {
 			updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
 		};
 
-		await db.collection(ATTENDANCE_COLLECTION).doc(docId).set(attendance);
+		writer.set(db.collection(ATTENDANCE_COLLECTION).doc(docId), attendance);
 
 		const summary = {
 			userId: user.uid,
@@ -253,10 +249,10 @@ async function seedAttendanceForUser(user: SeedUser): Promise<number> {
 			lastTimeOut: Timestamp.fromDate(timeOut),
 			updatedAt: FieldValue.serverTimestamp(),
 		};
-		await db
-			.collection(DAILY_SUMMARY_COLLECTION)
-			.doc(`${user.uid}_${date}`)
-			.set(summary);
+		writer.set(
+			db.collection(DAILY_SUMMARY_COLLECTION).doc(`${user.uid}_${date}`),
+			summary,
+		);
 
 		written += 1;
 	}
@@ -279,30 +275,34 @@ function round2(value: number): number {
  * user, written by the seed admin. Useful for verifying the bell UI on first
  * load - the admin sees no notifications, employees see a small unread set.
  */
-async function seedNotifications(): Promise<number> {
+function seedNotifications(writer: BulkWriter): number {
 	const adminUid = SEED_USERS.find((u) => u.role === 'admin')?.uid;
 	if (!adminUid) return 0;
 
+	const db = getFirestoreDb();
 	const employees = SEED_USERS.filter((u) => u.role !== 'admin');
 	let written = 0;
 	for (const emp of employees) {
 		// Two unread + one already-read sample so both states are visible.
-		await createNotification({
+		writer.set(db.collection(NOTIFICATIONS_COLLECTION).doc(), {
 			recipientUid: emp.uid,
 			actorUid: adminUid,
 			type: 'punch_edited',
+			read: false,
 			title: 'Your time entry was edited',
 			body: 'Reason: Adjusted clock-in to 09:05 (admin verified).',
+			createdAt: FieldValue.serverTimestamp(),
 		});
-		await createNotification({
+		writer.set(db.collection(NOTIFICATIONS_COLLECTION).doc(), {
 			recipientUid: emp.uid,
 			actorUid: adminUid,
 			type: 'punch_edited',
+			read: false,
 			title: 'Your time entry was edited',
 			body: 'Reason: Approved overtime for yesterday.',
+			createdAt: FieldValue.serverTimestamp(),
 		});
-		const db = getFirestoreDb();
-		await db.collection(NOTIFICATIONS_COLLECTION).add({
+		writer.set(db.collection(NOTIFICATIONS_COLLECTION).doc(), {
 			recipientUid: emp.uid,
 			actorUid: adminUid,
 			type: 'punch_edited',
@@ -371,18 +371,25 @@ async function main(): Promise<void> {
 		if (!args.has('--seed')) return;
 	}
 
+	const db = getFirestoreDb();
+	const writer = db.bulkWriter();
+	writer.onWriteError((err) => err.failedAttempts < 3);
+
 	console.log(`Seeding ${SEED_USERS.length} users…`);
 	for (const user of SEED_USERS) {
 		await upsertAuthUser(user);
-		await upsertProfile(user);
-		const days = await seedAttendanceForUser(user);
+		upsertProfile(user, writer);
+		const days = seedAttendanceForUser(user, writer);
 		console.log(
-			`  · ${user.email} (${user.role}) - ${days} attendance days written`,
+			`  · ${user.email} (${user.role}) - ${days} attendance days queued`,
 		);
 	}
 
-	const notifCount = await seedNotifications();
-	console.log(`Seeded ${notifCount} sample notifications.`);
+	const notifCount = seedNotifications(writer);
+	console.log(`Queued ${notifCount} sample notifications.`);
+
+	await writer.close();
+	console.log('All writes committed.');
 
 	console.log('\nDone. Sign-in credentials:');
 	for (const user of SEED_USERS) {

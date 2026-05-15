@@ -2,6 +2,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	EDIT_REQUESTS_COLLECTION,
+	NOTIFICATIONS_COLLECTION,
 } from '../lib/constants';
 import { getFirestoreDb } from '../lib/firebase';
 import type {
@@ -200,24 +201,32 @@ export async function approveEditRequest(
 		adminUid,
 	);
 
+	// Commit the request status flip + employee notification atomically — without
+	// this, a notification-write failure left the request `approved` with no
+	// notice to the employee.
 	const resolvedAt = Timestamp.now();
-	await ref.update({
+	const batch = db.batch();
+	batch.update(ref, {
 		status: 'approved',
 		resolvedAt: FieldValue.serverTimestamp(),
 		resolvedBy: adminUid,
 		adminNote: note,
 	});
-
-	await createNotification({
-		recipientUid: data.requesterUid,
-		actorUid: adminUid,
-		type: 'edit_request_approved',
-		title: 'Your time-entry change was approved',
-		body: note
-			? `Admin note: ${note}`
-			: 'Your requested clock-in/clock-out change has been applied.',
-		metadata: { attendanceId: data.attendanceId, date: data.date },
-	});
+	const notifRef = db.collection(NOTIFICATIONS_COLLECTION).doc();
+	await createNotification(
+		{
+			recipientUid: data.requesterUid,
+			actorUid: adminUid,
+			type: 'edit_request_approved',
+			title: 'Your time-entry change was approved',
+			body: note
+				? `Admin note: ${note}`
+				: 'Your requested clock-in/clock-out change has been applied.',
+			metadata: { attendanceId: data.attendanceId, date: data.date },
+		},
+		{ batch, ref: notifRef },
+	);
+	await batch.commit();
 
 	// Synthesize the return locally — avoids re-reading what we just wrote.
 	return {
@@ -252,23 +261,28 @@ export async function rejectEditRequest(
 	}
 
 	const resolvedAt = Timestamp.now();
-	await ref.update({
+	const batch = db.batch();
+	batch.update(ref, {
 		status: 'rejected',
 		resolvedAt: FieldValue.serverTimestamp(),
 		resolvedBy: adminUid,
 		adminNote: note,
 	});
-
-	await createNotification({
-		recipientUid: data.requesterUid,
-		actorUid: adminUid,
-		type: 'edit_request_rejected',
-		title: 'Your time-entry change was rejected',
-		body: note
-			? `Admin note: ${note}`
-			: 'Your requested clock-in/clock-out change was not applied.',
-		metadata: { attendanceId: data.attendanceId, date: data.date },
-	});
+	const notifRef = db.collection(NOTIFICATIONS_COLLECTION).doc();
+	await createNotification(
+		{
+			recipientUid: data.requesterUid,
+			actorUid: adminUid,
+			type: 'edit_request_rejected',
+			title: 'Your time-entry change was rejected',
+			body: note
+				? `Admin note: ${note}`
+				: 'Your requested clock-in/clock-out change was not applied.',
+			metadata: { attendanceId: data.attendanceId, date: data.date },
+		},
+		{ batch, ref: notifRef },
+	);
+	await batch.commit();
 
 	// Synthesize the return locally — avoids re-reading what we just wrote.
 	return {

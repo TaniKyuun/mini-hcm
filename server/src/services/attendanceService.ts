@@ -256,9 +256,26 @@ export async function adminUpdateAttendance(
 		updatedAt: FieldValue.serverTimestamp(),
 	});
 
-	await writeDailySummary(db, existing.userId, nextDate);
-	if (existing.date !== nextDate) {
-		await writeDailySummary(db, existing.userId, existing.date);
+	// Summary totals only depend on (timeIn, timeOut, status, date) — schedule and
+	// timezone come from the profile and don't change here. Skip the recompute when
+	// none of those moved; reason-only edits are a no-op for the day's aggregates.
+	const timeInChanged = nextTimeIn.getTime() !== prevTimeIn.getTime();
+	const prevOutMs = prevTimeOut?.getTime() ?? null;
+	const nextOutMs = nextTimeOut?.getTime() ?? null;
+	const timeOutChanged = prevOutMs !== nextOutMs;
+	const dateChanged = existing.date !== nextDate;
+	const statusChanged = existing.status !== status;
+	const materialChange =
+		timeInChanged || timeOutChanged || dateChanged || statusChanged;
+	// Heal legacy/corrupted summaries: a completed session with no computed payload
+	// means the summary may be stale even if this edit didn't move any times.
+	const needsHeal = status === 'completed' && existing.computed == null;
+	if (materialChange || needsHeal) {
+		const summaryJobs = [writeDailySummary(db, existing.userId, nextDate)];
+		if (dateChanged) {
+			summaryJobs.push(writeDailySummary(db, existing.userId, existing.date));
+		}
+		await Promise.all(summaryJobs);
 	}
 
 	if (input.notify) {
