@@ -6,7 +6,7 @@ import {
 	PencilIcon,
 	PlusIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { EditPunchModal } from '@/components/EditPunchModal';
 import { KpiCard } from '@/components/KpiCard';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -98,17 +98,26 @@ export function Admin() {
 	const [editing, setEditing] = useState<AttendanceRecord | null>(null);
 	const [editBusy, setEditBusy] = useState(false);
 	const [editError, setEditError] = useState<string | null>(null);
+	const reportRequestId = useRef(0);
 
 	const loadReport = useCallback(async () => {
+		const requestId = reportRequestId.current + 1;
+		reportRequestId.current = requestId;
+		const isLatestRequest = () => reportRequestId.current === requestId;
+
 		if (!user) return;
+		if (!isLatestRequest()) return;
 		setLoading(true);
+		if (!isLatestRequest()) return;
 		setError(null);
 		try {
 			const [empResult, reportResult] = await Promise.all([
 				fetchEmployees(user),
 				fetchDailyReport(user, date),
 			]);
+			if (!isLatestRequest()) return;
 			setEmployees(empResult.employees);
+			if (!isLatestRequest()) return;
 			setSummaries(reportResult.summaries);
 
 			const sessionsByUser: Record<string, AttendanceRecord[]> = {};
@@ -116,17 +125,23 @@ export function Admin() {
 				empResult.employees.map(async (emp) => {
 					try {
 						const r = await fetchAdminAttendance(user, emp.uid, date, date);
+						if (!isLatestRequest()) return;
 						sessionsByUser[emp.uid] = r.sessions;
 					} catch {
+						if (!isLatestRequest()) return;
 						sessionsByUser[emp.uid] = [];
 					}
 				}),
 			);
+			if (!isLatestRequest()) return;
 			setSessions(sessionsByUser);
 		} catch (caught) {
+			if (!isLatestRequest()) return;
 			setError(caught instanceof Error ? caught.message : 'Unknown error');
 		} finally {
-			setLoading(false);
+			if (isLatestRequest()) {
+				setLoading(false);
+			}
 		}
 	}, [user, date]);
 
