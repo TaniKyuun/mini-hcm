@@ -13,8 +13,7 @@
 			"**/src/**/*",
 			"**/index.html",
 			"**/.vscode/**/*",
-			"**/vite.config.ts",
-			"!**/src/global.css"
+			"**/vite.config.ts"
 		]
 	},
 	"formatter": {
@@ -30,6 +29,11 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "single"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	},
 	"assist": {

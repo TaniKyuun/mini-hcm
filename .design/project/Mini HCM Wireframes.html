@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mini HCM — Wireframes</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1c1a17;
+    --ink-soft: #5b554d;
+    --ink-mute: #9a948a;
+    --paper: #ffffff;
+    --paper-2: #f6f4ef;
+    --line: #1c1a17;
+    --line-soft: #c8c2b6;
+    --line-mute: #e3ddd1;
+    --accent: #2b59ff;       /* blue */
+    --accent-soft: #dbe3ff;
+    --warn: #d97757;
+    --good: #2f8a4f;
+    --bad:  #c0392b;
+    --radius: 6px;
+    --font-sans: "Geist", -apple-system, system-ui, sans-serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --font-hand: "Caveat", "Comic Sans MS", cursive;
+  }
+  html, body { margin: 0; padding: 0; font-family: var(--font-sans); color: var(--ink); }
+
+  /* SKETCH MODE — toggled by adding .sketch class on .wf root */
+  .sketch {
+    --font-sans: "Caveat", "Comic Sans MS", cursive;
+    --font-mono: "Caveat", "Comic Sans MS", cursive;
+  }
+  .sketch .wf-box,
+  .sketch .wf-card,
+  .sketch .wf-btn,
+  .sketch .wf-input,
+  .sketch .wf-chip,
+  .sketch .wf-cell,
+  .sketch .wf-thumb,
+  .sketch .wf-modal {
+    border-radius: 10px 8px 12px 7px / 8px 10px 7px 11px;
+    filter: url(#wobble);
+  }
+  .sketch .wf-btn,
+  .sketch .wf-input,
+  .sketch .wf-chip { font-family: var(--font-hand); font-size: 18px; }
+  .sketch .wf-h1, .sketch .wf-h2, .sketch .wf-label { font-family: var(--font-hand); }
+  .sketch .wf-h1 { font-size: 38px; }
+  .sketch .wf-num { font-family: var(--font-hand); font-weight: 700; }
+
+  /* annotations */
+  .wf-anno {
+    position: absolute;
+    font-family: var(--font-hand);
+    color: var(--accent);
+    font-size: 17px;
+    line-height: 1.15;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity .15s;
+  }
+  .wf-anno.tight { font-size: 14px; }
+  .wf-root.no-anno .wf-anno { opacity: 0; }
+  .wf-arrow { stroke: var(--accent); fill: none; stroke-width: 1.6; stroke-linecap: round; }
+</style>
+
+<!-- shared SVG defs (wobble filter for sketch mode) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="wobble">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="1.6"/>
+    </filter>
+  </defs>
+</svg>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="wf.jsx"></script>
+<script type="text/babel" src="screens-employee.jsx"></script>
+<script type="text/babel" src="screens-admin.jsx"></script>
+<script type="text/babel" src="screens-admin-tabs.jsx"></script>
+<script type="text/babel" src="screens-people-reports.jsx"></script>
+<script type="text/babel" src="screens-modal.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

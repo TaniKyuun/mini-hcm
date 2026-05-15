@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>mini-hcm Punch Attendance — Implementation Walkthrough</title>
+		<style>
+			:root {
+				--fg: #18181b;
+				--fg-muted: #52525b;
+				--fg-subtle: #71717a;
+				--bg: #fafafa;
+				--surface: #ffffff;
+				--border: #e4e4e7;
+				--border-strong: #d4d4d8;
+				--accent: #0f766e;
+				--accent-soft: #ccfbf1;
+				--code-bg: #f4f4f5;
+				--code-block-bg: #18181b;
+				--code-block-fg: #f4f4f5;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html {
+				scroll-behavior: smooth;
+			}
+
+			body {
+				margin: 0;
+				font-family:
+					-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+					Ubuntu, Cantarell, sans-serif;
+				color: var(--fg);
+				background: var(--bg);
+				line-height: 1.6;
+				font-size: 16px;
+			}
+
+			.container {
+				max-width: 880px;
+				margin: 0 auto;
+				padding: 3rem 1.5rem 6rem;
+			}
+
+			header.page-header {
+				margin-bottom: 2.5rem;
+				padding-bottom: 1.5rem;
+				border-bottom: 1px solid var(--border);
+			}
+
+			header.page-header .eyebrow {
+				margin: 0;
+				font-size: 0.875rem;
+				font-weight: 600;
+				color: var(--accent);
+				letter-spacing: 0.05em;
+				text-transform: uppercase;
+			}
+
+			header.page-header h1 {
+				margin: 0.5rem 0 0;
+				font-size: 2rem;
+				line-height: 1.2;
+				letter-spacing: -0.02em;
+			}
+
+			h2 {
+				margin-top: 2.75rem;
+				margin-bottom: 1rem;
+				padding-top: 0.75rem;
+				border-top: 1px solid var(--border);
+				font-size: 1.5rem;
+				letter-spacing: -0.015em;
+			}
+
+			h3 {
+				margin-top: 2rem;
+				margin-bottom: 0.75rem;
+				font-size: 1.15rem;
+				letter-spacing: -0.01em;
+			}
+
+			h4 {
+				margin-top: 1.5rem;
+				margin-bottom: 0.5rem;
+				font-size: 1rem;
+			}
+
+			p {
+				margin: 0.75rem 0;
+				color: var(--fg);
+			}
+
+			strong {
+				font-weight: 600;
+				color: #09090b;
+			}
+
+			ul,
+			ol {
+				margin: 0.75rem 0;
+				padding-left: 1.5rem;
+			}
+
+			li {
+				margin: 0.35rem 0;
+			}
+
+			code {
+				font-family:
+					ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Mono', Menlo,
+					Consolas, monospace;
+				font-size: 0.875em;
+				background: var(--code-bg);
+				color: var(--fg);
+				padding: 0.15em 0.4em;
+				border-radius: 4px;
+				border: 1px solid var(--border);
+			}
+
+			pre {
+				background: var(--code-block-bg);
+				color: var(--code-block-fg);
+				padding: 1.25rem 1.5rem;
+				border-radius: 8px;
+				overflow-x: auto;
+				font-size: 0.85rem;
+				line-height: 1.55;
+				margin: 1rem 0;
+			}
+
+			pre code {
+				background: transparent;
+				border: 0;
+				padding: 0;
+				color: inherit;
+				font-size: inherit;
+			}
+
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				margin: 1rem 0;
+				font-size: 0.9rem;
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				overflow: hidden;
+			}
+
+			th,
+			td {
+				padding: 0.7rem 0.9rem;
+				text-align: left;
+				border-bottom: 1px solid var(--border);
+				vertical-align: top;
+			}
+
+			th {
+				background: #f4f4f5;
+				font-weight: 600;
+				font-size: 0.78rem;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				color: var(--fg-muted);
+			}
+
+			tr:last-child td {
+				border-bottom: 0;
+			}
+
+			tr:hover td {
+				background: #fafafa;
+			}
+
+			hr {
+				border: 0;
+				border-top: 1px solid var(--border);
+				margin: 2.5rem 0;
+			}
+
+			.callout {
+				background: var(--accent-soft);
+				border-left: 3px solid var(--accent);
+				padding: 0.85rem 1rem;
+				border-radius: 4px;
+				margin: 1rem 0;
+			}
+
+			.toc {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 1rem 1.25rem;
+				margin-bottom: 2rem;
+			}
+
+			.toc h4 {
+				margin: 0 0 0.5rem;
+				font-size: 0.8rem;
+				font-weight: 600;
+				color: var(--fg-muted);
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+			}
+
+			.toc ol {
+				margin: 0;
+				padding-left: 1.2rem;
+				font-size: 0.92rem;
+			}
+
+			.toc a {
+				color: var(--fg);
+				text-decoration: none;
+			}
+
+			.toc a:hover {
+				color: var(--accent);
+				text-decoration: underline;
+			}
+
+			a {
+				color: var(--accent);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<header class="page-header">
+				<p class="eyebrow">mini-hcm</p>
+				<h1>Punch Attendance — Implementation Walkthrough</h1>
+			</header>
+
+			<nav class="toc">
+				<h4>Contents</h4>
+				<ol>
+					<li><a href="#architecture">Architecture at a glance</a></li>
+					<li><a href="#server">Server (<code>server/src/</code>)</a></li>
+					<li><a href="#client">Client (<code>client/src/</code>)</a></li>
+					<li><a href="#firebase">Firebase artifacts</a></li>
+					<li><a href="#flows">Key flows end-to-end</a></li>
+					<li><a href="#decisions">Design decisions worth knowing</a></li>
+				</ol>
+			</nav>
+
+			<h2 id="architecture">1. Architecture at a glance</h2>
+			<pre><code>┌─────────────────────┐    Bearer ID token     ┌─────────────────────┐
+│  React (Vite)       │  ───────────────────▶  │  Express (Bun)      │
+│  - Firebase Auth    │  ◀─── JSON ──────────  │  - Admin SDK        │
+│  - React Router     │                        │  - Firestore writes │
+└─────────────────────┘                        └─────────────────────┘
+                                                         │
+                                                         ▼
+                                              ┌─────────────────────┐
+                                              │  Firestore          │
+                                              │  - users            │
+                                              │  - attendance       │
+                                              │  - dailySummary     │
+                                              └─────────────────────┘</code></pre>
+
+			<p>
+				The browser <strong>never writes to Firestore directly</strong>. It
+				only authenticates with Firebase Auth, then attaches the resulting ID
+				token to every <code>/api/*</code> call. The Express server verifies
+				the token, performs all reads/writes through the Admin SDK (which
+				bypasses security rules), and returns plain JSON. Security rules
+				exist as a defense-in-depth fence against a malicious client trying
+				to talk to Firestore directly.
+			</p>
+
+			<h2 id="server">2. Server (<code>server/src/</code>)</h2>
+
+			<h3>2.1 Bootstrapping & lib</h3>
+			<p>
+				<code>server/src/lib/firebase.ts</code> — Singleton getters for
+				<code>App</code>, <code>Auth</code>, and the new
+				<strong><code>Firestore</code></strong> instance. All three are
+				lazily initialized using the service-account credentials from
+				<code>env.firebase</code>, so the SDK is initialized exactly once and
+				reused across requests.
+			</p>
+			<p>
+				<code>server/src/lib/constants.ts</code> — Collection names
+				(<code>USERS_COLLECTION</code>, <code>ATTENDANCE_COLLECTION</code>,
+				<code>DAILY_SUMMARY_COLLECTION</code>) plus defaults for new profiles
+				(<code>DEFAULT_TIMEZONE = 'Asia/Manila'</code>,
+				<code>DEFAULT_SCHEDULE = 09:00–18:00</code>). Centralizing collection
+				names avoids typos that silently create a sibling collection.
+			</p>
+			<p>
+				<code>server/src/lib/serialize.ts</code> — Firestore
+				<code>Timestamp</code> objects don't JSON-serialize cleanly (they
+				become <code>{ _seconds, _nanoseconds }</code>). Three helpers
+				(<code>serializeProfile</code>, <code>serializeAttendance</code>,
+				<code>serializeDailySummary</code>) convert every
+				<code>Timestamp</code> field to ISO-8601 strings before responses
+				leave the server.
+			</p>
+			<p>
+				<code>server/src/types/models.ts</code> — TypeScript shapes for
+				<code>UserProfile</code>, <code>AttendanceDoc</code>,
+				<code>DailySummaryDoc</code>, plus <code>UserRole</code>,
+				<code>UserSchedule</code>, <code>ComputedAttendance</code>. These are
+				the <strong>server-internal</strong> shapes (with
+				<code>Timestamp</code>s). The client has parallel types with strings.
+			</p>
+
+			<h3>2.2 Middleware</h3>
+			<p>
+				<code>authenticateFirebase.ts</code> (existing) — reads
+				<code>Authorization: Bearer &lt;token&gt;</code>, verifies it with
+				Firebase Admin, stashes the <code>DecodedIdToken</code> in
+				<code>res.locals.firebaseUser</code>. All protected routes mount this.
+			</p>
+			<p>
+				<code>server/src/middleware/requireAdmin.ts</code> — runs after
+				<code>authenticateFirebase</code>. Looks up the user's
+				<code>users/{uid}</code> doc, returns <strong>403</strong> unless
+				<code>role === 'admin'</code>. Used by the entire
+				<code>/api/admin/*</code> subtree.
+			</p>
+
+			<h3>2.3 Services (pure-ish business logic)</h3>
+			<p>
+				<code>server/src/services/computeService.ts</code> —
+				<strong>The most safety-critical file.</strong> Pure functions, no
+				Firestore I/O. Computes:
+			</p>
+			<ul>
+				<li>
+					<strong>Lateness</strong> =
+					<code>max(0, timeIn − scheduledStart)</code> in minutes
+				</li>
+				<li>
+					<strong>Undertime</strong> =
+					<code>max(0, scheduledEnd − timeOut)</code> in minutes
+				</li>
+				<li>
+					<strong>Regular hours</strong> = overlap between actual
+					<code>[timeIn, timeOut]</code> and scheduled
+					<code>[start, end]</code>
+				</li>
+				<li>
+					<strong>Overtime</strong> = <code>max(0, timeOut − scheduledEnd)</code>
+				</li>
+				<li>
+					<strong>Night differential</strong> = overlap with
+					<code>[22:00, 06:00 next day]</code> in local time, summed across
+					spanned nights
+				</li>
+			</ul>
+			<p>Two non-obvious bits:</p>
+			<ul>
+				<li>
+					<strong>Overnight shifts</strong> are auto-detected: if
+					<code>schedule.end &lt;= schedule.start</code> (e.g., 22:00–06:00),
+					<code>scheduledEnd</code> is shifted to the next local calendar
+					day.
+				</li>
+				<li>
+					<strong>Timezone conversion</strong> uses
+					<code>date-fns-tz</code>'s <code>fromZonedTime</code>: schedule
+					strings like <code>"09:00"</code> are interpreted in the user's
+					<code>timezone</code> and then converted to UTC for comparison with
+					the UTC <code>timeIn</code>/<code>timeOut</code>. This means a
+					Manila user's "09:00" and a Tokyo user's "09:00" produce different
+					UTC moments — exactly what you want.
+				</li>
+			</ul>
+			<p>
+				<code>server/src/services/userService.ts</code> —
+				<code>getOrCreateUserProfile</code> is the
+				<strong>auto-bootstrap</strong> that runs the first time any
+				authenticated request hits the server for a user with no
+				<code>users/{uid}</code> doc. It creates the doc with defaults
+				(employee role, Manila tz, 09:00–18:00). <code>updateOwnProfile</code>
+				lets users edit only <code>name</code>, <code>timezone</code>,
+				<code>schedule</code> (role is admin-only).
+				<code>adminUpdateProfile</code> adds <code>role</code> and
+				<code>email</code>. <code>listAllProfiles</code> is for admin reports.
+			</p>
+			<p>
+				<code>server/src/services/attendanceService.ts</code> — five exported
+				operations:
+			</p>
+			<table>
+				<thead>
+					<tr>
+						<th>Function</th>
+						<th>What it does</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><code>findActiveSession(uid)</code></td>
+						<td>
+							One-row lookup:
+							<code>where userId == uid AND status == 'active' LIMIT 1</code>
+						</td>
+					</tr>
+					<tr>
+						<td><code>punchIn(profile)</code></td>
+						<td>
+							Refuses if active session exists (throws
+							<code>AttendanceConflictError</code> → 409). Creates
+							<code>{uid}_{YYYY-MM-DD}_{timestamp}</code> doc with
+							<code>status: 'active'</code>.
+						</td>
+					</tr>
+					<tr>
+						<td><code>punchOut(profile)</code></td>
+						<td>
+							Finds active session, fills in <code>timeOut</code>, runs
+							<code>computeHours</code>, writes back, then triggers
+							<code>writeDailySummary</code> for that user/date.
+						</td>
+					</tr>
+					<tr>
+						<td><code>getHistory(uid, start, end)</code></td>
+						<td>Ranged + ordered query (needs composite index)</td>
+					</tr>
+					<tr>
+						<td><code>adminUpdateAttendance(id, input)</code></td>
+						<td>
+							Edits punch times, recomputes, re-aggregates the day. If the
+							edit moved the record to a different <code>date</code>,
+							<strong>both</strong> old and new daily summaries are
+							recomputed so neither is stale.
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<p>
+				<code>server/src/services/summaryService.ts</code> —
+				<code>writeDailySummary(db, uid, date)</code> re-queries all
+				<code>completed</code> sessions for that user/date, sums every field
+				of <code>computed</code>, and <strong>overwrites</strong>
+				<code>dailySummary/{uid_date}</code>. This "recompute from scratch on
+				every change" strategy is deliberately chosen in the system design: it
+				costs an extra read per punch-out but eliminates aggregation drift
+				entirely. <code>readDailySummary</code> and
+				<code>readWeeklySummaries</code> (which uses doc-ID lookups, no query
+				needed) feed the dashboard. <code>buildWeekDates(startDate)</code>
+				generates 7 ISO date strings.
+			</p>
+
+			<h3>2.4 Routes</h3>
+			<p>
+				Mounted in <code>server/src/app.ts</code> under these prefixes:
+			</p>
+			<table>
+				<thead>
+					<tr>
+						<th>Prefix</th>
+						<th>File</th>
+						<th>Endpoints</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><code>/api/me</code></td>
+						<td><code>routes/users.ts</code></td>
+						<td>
+							<code>GET</code>, <code>PUT</code> — current user's profile
+							(auto-bootstrap on GET)
+						</td>
+					</tr>
+					<tr>
+						<td><code>/api/attendance</code></td>
+						<td><code>routes/attendance.ts</code></td>
+						<td>
+							<code>GET /active</code>, <code>POST /punch-in</code>,
+							<code>POST /punch-out</code>,
+							<code>GET /history?startDate&amp;endDate</code>
+						</td>
+					</tr>
+					<tr>
+						<td><code>/api/summary</code></td>
+						<td><code>routes/summary.ts</code></td>
+						<td>
+							<code>GET /daily?date</code>,
+							<code>GET /weekly?startDate</code>
+						</td>
+					</tr>
+					<tr>
+						<td><code>/api/admin</code></td>
+						<td><code>routes/admin.ts</code></td>
+						<td>
+							All admin-only: employees CRUD, attendance edit, daily/weekly
+							reports
+						</td>
+					</tr>
+				</tbody>
+			</table>
+			<p>
+				Every route handler is typed with <code>AuthenticatedLocals</code>
+				(or <code>AdminLocals</code> for admin), so
+				<code>res.locals.firebaseUser.uid</code> is non-null and strongly
+				typed inside the handler. Errors from the service layer flow through
+				<code>next(error)</code> → existing <code>errorHandler</code> for
+				500s, except <code>AttendanceConflictError</code> (409) and
+				<code>NotFoundError</code> (404) which are translated to specific
+				responses.
+			</p>
+
+			<h2 id="client">3. Client (<code>client/src/</code>)</h2>
+
+			<h3>3.1 Plumbing</h3>
+			<p>
+				<code>client/src/lib/auth.ts</code> — Tiny React context exposing
+				<code>{ user, authReady }</code>. The Provider is set in
+				<code>App.tsx</code> after the auth state resolves, so any nested
+				component can do <code>useAuth()</code> and get the current
+				<code>User</code>.
+			</p>
+			<p>
+				<code>client/src/lib/apiClient.ts</code> — One function:
+				<code>apiRequest&lt;T&gt;(user, path, options)</code>. Mints a fresh
+				Firebase ID token via <code>user.getIdToken()</code>, attaches it as
+				<code>Bearer</code>, serializes/deserializes JSON, and throws a typed
+				<code>ApiError</code> (with <code>status</code>) when the response is
+				not OK. Every service call goes through this — no fetch calls are
+				scattered across the codebase.
+			</p>
+			<p>
+				<code>client/src/types/api.ts</code> — Parallel-but-string-typed
+				versions of the server models (timestamps are
+				<code>string | null</code>). Plus response wrappers
+				(<code>HistoryResponse</code>, <code>WeeklyReportResponse</code>,
+				etc.) that match exactly what the routes return.
+			</p>
+
+			<h3>3.2 Service modules</h3>
+			<p>
+				<code>client/src/services/attendanceService.ts</code> — Typed wrappers
+				around every employee endpoint: <code>fetchMe</code>,
+				<code>updateMe</code>, <code>fetchActiveSession</code>,
+				<code>postPunchIn</code>, <code>postPunchOut</code>,
+				<code>fetchHistory</code>, <code>fetchDailySummary</code>,
+				<code>fetchWeeklySummary</code>. Each takes a <code>User</code> and an
+				optional <code>AbortSignal</code>.
+			</p>
+			<p>
+				<code>client/src/services/adminService.ts</code> — Same pattern for
+				admin endpoints.
+			</p>
+
+			<h3>3.3 Hooks</h3>
+			<p>
+				All four follow the same shape:
+				<code>{ data, loading, error, refresh }</code> plus an internal
+				<code>useEffect</code> that cancels in-flight requests via
+				<code>AbortController</code> when the user changes or the component
+				unmounts.
+			</p>
+			<ul>
+				<li><code>useProfile.ts</code> — current user's profile</li>
+				<li>
+					<code>useActiveSession.ts</code> — also exposes
+					<code>setSession</code> so PunchCard can optimistically update
+					after punch-in/out
+				</li>
+				<li><code>useDailySummary.ts</code> — KPI source for Dashboard</li>
+				<li>
+					<code>useWeeklySummary.ts</code> — available but not yet rendered
+					(you can wire it into a weekly view whenever)
+				</li>
+			</ul>
+
+			<h3>3.4 Components</h3>
+			<p>
+				<code>client/src/components/PunchCard.tsx</code> — The headline UI.
+				Shows "Not punched in" or live <code>Xh YYm</code> elapsed (a
+				<code>setInterval(..., 1000)</code> driven by component state, started
+				only when an active session exists and torn down otherwise). The
+				button toggles between teal "Punch in" and rose "Punch out". After
+				punch-out it calls <code>onChange(null)</code> so the parent clears
+				state and refreshes summary KPIs.
+			</p>
+			<p>
+				<code>client/src/components/KpiCard.tsx</code> — Reusable
+				label/value/hint card with five accent colors.
+			</p>
+			<p>
+				<code>client/src/components/AttendanceTable.tsx</code> — Renders an
+				array of <code>AttendanceRecord</code>s as a striped table. If
+				<code>onEdit</code> is provided (admin context), each row gets an
+				Edit link.
+			</p>
+			<p>
+				<code>client/src/components/ReportTable.tsx</code> — Cross-joins
+				<code>employees</code> with <code>summaries</code> by
+				<code>userId</code> so every employee shows up even if they have no
+				sessions that day (their row is just zeros).
+			</p>
+
+			<h3>3.5 Pages</h3>
+			<p>
+				<code>client/src/pages/SignIn.tsx</code> — Extracted from the old
+				<code>App.tsx</code>. Pure email/password form, no router.
+			</p>
+			<p>
+				<code>client/src/pages/AppLayout.tsx</code> — The shell rendered for
+				authenticated users. Header with mini-hcm branding,
+				<code>NavLink</code>s for
+				<strong>Dashboard / History / Admin</strong>, sign-out button. The
+				Admin link is <strong>conditionally rendered</strong> only when
+				<code>profile?.role === 'admin'</code> — so for employees, the admin
+				link is invisible (and the server still 403s if they hit
+				<code>/api/admin/*</code> directly).
+			</p>
+			<p>
+				<code>client/src/pages/Dashboard.tsx</code> — Hello + scheduled
+				hours, PunchCard, then six KPI cards (Regular, OT, ND, Total, Late,
+				Undertime). When the user punches in/out,
+				<code>handleSessionChange</code> triggers both
+				<code>refreshSession()</code> and <code>refreshSummary()</code> so
+				the metrics update immediately after a punch-out.
+			</p>
+			<p>
+				<code>client/src/pages/History.tsx</code> — Two date inputs
+				(defaults to last 14 days), Refresh button, AttendanceTable. Date
+				changes refetch via <code>useEffect</code> dependency.
+			</p>
+			<p><code>client/src/pages/Admin.tsx</code> — Three sections:</p>
+			<ol>
+				<li>
+					<strong>Date picker + ReportTable</strong> showing every employee's
+					totals for the selected date.
+				</li>
+				<li>
+					<strong>Per-employee inspector</strong>: select an employee, see
+					all their sessions for that date, click Edit on any row.
+				</li>
+				<li>
+					<strong>Edit modal</strong>: two <code>datetime-local</code> inputs
+					(timeIn, timeOut). Leaving timeOut blank reverts the session to
+					<code>active</code>. On save, the server recomputes the session
+					and re-aggregates that day's summary; the page then reloads both
+					views.
+				</li>
+			</ol>
+
+			<h3>3.6 Routing entrypoint</h3>
+			<p>
+				<code>client/src/App.tsx</code> — Restores auth state, shows a
+				"Restoring secure session…" placeholder, then either
+				<code>&lt;SignIn /&gt;</code> or the router tree wrapped in
+				<code>&lt;AuthContext.Provider&gt;</code>. Routes:
+			</p>
+			<ul>
+				<li><code>/</code> → <code>&lt;Dashboard /&gt;</code></li>
+				<li><code>/history</code> → <code>&lt;History /&gt;</code></li>
+				<li><code>/admin</code> → <code>&lt;Admin /&gt;</code></li>
+				<li><code>*</code> → redirects to <code>/</code></li>
+			</ul>
+
+			<h2 id="firebase">4. Firebase artifacts</h2>
+			<p>
+				<code>firestore.rules</code> — Defense-in-depth even though the
+				server bypasses them:
+			</p>
+			<ul>
+				<li>
+					Users can read/create their own <code>users/{uid}</code>; only
+					admins update.
+				</li>
+				<li>
+					Users can read their own <code>attendance</code>; only the Admin
+					SDK can update or delete (rules deny these for everyone).
+				</li>
+				<li>
+					<code>dailySummary</code> is read by owner or admin; never
+					client-writable.
+				</li>
+				<li>
+					<code>isAdmin()</code> reads the caller's user doc and checks
+					<code>role == 'admin'</code>.
+				</li>
+			</ul>
+			<p>
+				<code>firestore.indexes.json</code> — Three composite indexes needed
+				by our queries:
+			</p>
+			<ol>
+				<li>
+					<code>(userId asc, status asc)</code> — <code>findActiveSession</code>
+				</li>
+				<li>
+					<code>(userId asc, date asc, status asc)</code> —
+					<code>writeDailySummary</code>'s session pull
+				</li>
+				<li>
+					<code>(userId asc, date desc, timeIn desc)</code> —
+					<code>getHistory</code>
+				</li>
+			</ol>
+			<p>
+				<code>.firebaserc</code> + <code>firebase.json</code> — let
+				<code
+					>firebase deploy --only firestore:indexes,firestore:rules</code
+				>
+				find the two files above.
+			</p>
+
+			<h2 id="flows">5. Key flows end-to-end</h2>
+
+			<h3>Punch In</h3>
+			<pre><code>User clicks "Punch in"
+  → POST /api/attendance/punch-in (Bearer ID token)
+    → authenticateFirebase verifies token
+    → getOrCreateUserProfile(uid) — bootstraps if first time
+    → findActiveSession(uid) — must be null, else 409
+    → Firestore: SET attendance/{uid}_{date}_{ts}
+       { status: 'active', timeIn: now, computed: null }
+    → returns serialized record
+  → Client: PunchCard.onChange(record) → setSession(record)
+  → Live timer starts ticking</code></pre>
+
+			<h3>Punch Out</h3>
+			<pre><code>User clicks "Punch out"
+  → POST /api/attendance/punch-out
+    → findActiveSession(uid) — must exist, else 404
+    → computeHours({ timeIn, now, schedule, timezone })
+      → resolves scheduled window in user's tz
+      → computes regular/OT/ND/late/undertime
+    → Firestore: UPDATE attendance/{id}
+       { status: 'completed', timeOut, computed }
+    → writeDailySummary(db, uid, date)
+      → reads all completed sessions for uid+date
+      → SUMs into dailySummary/{uid_date}
+    → returns serialized record
+  → Client: handleSessionChange(null)
+    → useActiveSession.refresh() and useDailySummary.refresh()
+  → KPI cards update with new totals</code></pre>
+
+			<h3>Admin edits a punch</h3>
+			<pre><code>Admin opens modal, changes timeIn, saves
+  → PUT /api/admin/attendance/:id
+    → requireAdmin (looks up role from users/{uid})
+    → fetch original attendance doc + owner's profile
+    → computeHours with new times
+    → UPDATE attendance/{id} with new times+computed+date
+    → writeDailySummary for new date
+    → if date changed, also writeDailySummary for OLD date
+  → Admin page reloads daily report + employee's sessions</code></pre>
+
+			<h2 id="decisions">6. Design decisions worth knowing</h2>
+			<ul>
+				<li>
+					<strong>All time stored UTC; tz only applied at boundaries.</strong>
+					<code>timeIn</code>/<code>timeOut</code> are UTC
+					<code>Timestamp</code>s. The <code>timezone</code> field on the
+					user profile is consulted only when (a) resolving schedule strings
+					to absolute moments, (b) deriving the <code>date</code> partition
+					key, and (c) formatting display strings. This makes
+					cross-timezone reasoning trivial.
+				</li>
+				<li>
+					<strong>Daily summary recompute, not delta-update.</strong> Every
+					punch-out re-sums the day from scratch. Slightly more I/O, zero
+					possibility of drift after admin edits or late punches.
+				</li>
+				<li>
+					<strong>Auto-bootstrap profiles.</strong> Anyone who can sign in
+					(created in Firebase Console) becomes an <code>employee</code>
+					automatically on first authenticated request. There is no in-app
+					registration. To create the first admin, you flipped
+					<code>role</code> to <code>'admin'</code> in Console; subsequent
+					admins can be promoted via
+					<code>PUT /api/admin/employees/:uid</code>.
+				</li>
+				<li>
+					<strong>No client-side Firestore.</strong> Adding a feature means
+					adding a route, not loosening rules. Rules stay restrictive.
+				</li>
+				<li>
+					<strong><code>noUncheckedIndexedAccess</code> on server.</strong>
+					That's why we use <code>snapshot.docs[0]</code> and check for
+					undefined before destructuring — TS forces it.
+				</li>
+				<li>
+					<strong>React Compiler enabled</strong> (per
+					<code>vite.config.ts</code>). We deliberately did
+					<strong>not</strong> sprinkle <code>useMemo</code>/<code
+						>useCallback</code
+					>
+					everywhere — the compiler handles memoization. The
+					<code>useCallback</code>s that remain are only the ones whose
+					identity participates in a dependency array (e.g.,
+					<code>loadReport</code> passed to <code>useEffect</code>).
+				</li>
+			</ul>
+		</div>
+	</body>
+</html>

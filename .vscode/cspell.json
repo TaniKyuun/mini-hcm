@@ -3,7 +3,18 @@
 	"ignorePaths": [],
 	"dictionaryDefinitions": [],
 	"dictionaries": [],
-	"words": ["adminsdk", "bunx"],
+	"words": [
+		"adminsdk",
+		"bunx",
+		"firestore",
+		"fontsource",
+		"Merriweather",
+		"nums",
+		"oklch",
+		"shadcn",
+		"uids",
+		"undertime"
+	],
 	"ignoreWords": [],
 	"import": []
 }
