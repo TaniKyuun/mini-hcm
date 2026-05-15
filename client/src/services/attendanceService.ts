@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { apiRequest } from '../lib/apiClient';
+import { apiRequestJson } from '../lib/apiClient';
 import type {
 	ActiveSessionResponse,
 	AttendanceRecord,
@@ -11,7 +11,7 @@ import type {
 } from '../types/api';
 
 export function fetchMe(user: User, signal?: AbortSignal) {
-	return apiRequest<UserProfile>(user, '/api/me', { signal });
+	return apiRequestJson<UserProfile>(user, '/api/me', { signal });
 }
 
 export type UpdateProfileBody = {
@@ -21,23 +21,23 @@ export type UpdateProfileBody = {
 };
 
 export function updateMe(user: User, body: UpdateProfileBody) {
-	return apiRequest<UserProfile>(user, '/api/me', { method: 'PUT', body });
+	return apiRequestJson<UserProfile>(user, '/api/me', { method: 'PUT', body });
 }
 
 export function fetchActiveSession(user: User, signal?: AbortSignal) {
-	return apiRequest<ActiveSessionResponse>(user, '/api/attendance/active', {
+	return apiRequestJson<ActiveSessionResponse>(user, '/api/attendance/active', {
 		signal,
 	});
 }
 
 export function postPunchIn(user: User) {
-	return apiRequest<AttendanceRecord>(user, '/api/attendance/punch-in', {
+	return apiRequestJson<AttendanceRecord>(user, '/api/attendance/punch-in', {
 		method: 'POST',
 	});
 }
 
 export function postPunchOut(user: User) {
-	return apiRequest<AttendanceRecord>(user, '/api/attendance/punch-out', {
+	return apiRequestJson<AttendanceRecord>(user, '/api/attendance/punch-out', {
 		method: 'POST',
 	});
 }
@@ -52,7 +52,7 @@ export function fetchHistory(
 	if (startDate) params.set('startDate', startDate);
 	if (endDate) params.set('endDate', endDate);
 	const query = params.toString();
-	return apiRequest<HistoryResponse>(
+	return apiRequestJson<HistoryResponse>(
 		user,
 		`/api/attendance/history${query ? `?${query}` : ''}`,
 		{ signal },
@@ -65,9 +65,13 @@ export function fetchDailySummary(
 	signal?: AbortSignal,
 ) {
 	const query = date ? `?date=${encodeURIComponent(date)}` : '';
-	return apiRequest<DailySummaryResponse>(user, `/api/summary/daily${query}`, {
-		signal,
-	});
+	return apiRequestJson<DailySummaryResponse>(
+		user,
+		`/api/summary/daily${query}`,
+		{
+			signal,
+		},
+	);
 }
 
 export function fetchWeeklySummary(
@@ -76,7 +80,7 @@ export function fetchWeeklySummary(
 	signal?: AbortSignal,
 ) {
 	const query = startDate ? `?startDate=${encodeURIComponent(startDate)}` : '';
-	return apiRequest<WeeklySummaryResponse>(
+	return apiRequestJson<WeeklySummaryResponse>(
 		user,
 		`/api/summary/weekly${query}`,
 		{ signal },

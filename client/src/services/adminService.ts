@@ -1,5 +1,5 @@
 import type { User } from 'firebase/auth';
-import { apiRequest } from '../lib/apiClient';
+import { apiRequestJson } from '../lib/apiClient';
 import type {
 	AdminAttendanceResponse,
 	AttendanceRecord,
@@ -12,7 +12,7 @@ import type {
 } from '../types/api';
 
 export function fetchEmployees(user: User, signal?: AbortSignal) {
-	return apiRequest<EmployeesResponse>(user, '/api/admin/employees', {
+	return apiRequestJson<EmployeesResponse>(user, '/api/admin/employees', {
 		signal,
 	});
 }
@@ -30,7 +30,7 @@ export function adminUpdateEmployee(
 	uid: string,
 	body: AdminUpdateProfileBody,
 ) {
-	return apiRequest<UserProfile>(user, `/api/admin/employees/${uid}`, {
+	return apiRequestJson<UserProfile>(user, `/api/admin/employees/${uid}`, {
 		method: 'PUT',
 		body,
 	});
@@ -46,7 +46,7 @@ export function fetchAdminAttendance(
 	const params = new URLSearchParams({ userId });
 	if (startDate) params.set('startDate', startDate);
 	if (endDate) params.set('endDate', endDate);
-	return apiRequest<AdminAttendanceResponse>(
+	return apiRequestJson<AdminAttendanceResponse>(
 		user,
 		`/api/admin/attendance?${params.toString()}`,
 		{ signal },
@@ -65,7 +65,7 @@ export function adminUpdateAttendance(
 	id: string,
 	body: AdminAttendanceUpdateBody,
 ) {
-	return apiRequest<AttendanceRecord>(user, `/api/admin/attendance/${id}`, {
+	return apiRequestJson<AttendanceRecord>(user, `/api/admin/attendance/${id}`, {
 		method: 'PUT',
 		body,
 	});
@@ -77,7 +77,7 @@ export function fetchDailyReport(
 	signal?: AbortSignal,
 ) {
 	const query = date ? `?date=${encodeURIComponent(date)}` : '';
-	return apiRequest<DailyReportResponse>(
+	return apiRequestJson<DailyReportResponse>(
 		user,
 		`/api/admin/reports/daily${query}`,
 		{ signal },
@@ -90,7 +90,7 @@ export function fetchWeeklyReport(
 	signal?: AbortSignal,
 ) {
 	const query = startDate ? `?startDate=${encodeURIComponent(startDate)}` : '';
-	return apiRequest<WeeklyReportResponse>(
+	return apiRequestJson<WeeklyReportResponse>(
 		user,
 		`/api/admin/reports/weekly${query}`,
 		{ signal },

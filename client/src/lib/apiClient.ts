@@ -20,7 +20,7 @@ export async function apiRequest<T>(
 	user: User,
 	path: string,
 	options: RequestOptions = {},
-): Promise<T> {
+): Promise<T | undefined> {
 	const token = await user.getIdToken();
 	const headers: Record<string, string> = {
 		Authorization: `Bearer ${token}`,
@@ -51,8 +51,20 @@ export async function apiRequest<T>(
 	}
 
 	if (response.status === 204) {
-		return undefined as T;
+		return undefined;
 	}
 
 	return (await response.json()) as T;
+}
+
+export async function apiRequestJson<T>(
+	user: User,
+	path: string,
+	options: RequestOptions = {},
+): Promise<T> {
+	const data = await apiRequest<T>(user, path, options);
+	if (data === undefined) {
+		throw new ApiError(204, 'Expected response body');
+	}
+	return data;
 }
