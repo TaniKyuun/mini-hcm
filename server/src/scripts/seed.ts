@@ -1,4 +1,4 @@
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
@@ -160,14 +160,11 @@ function localToUtcDate(
 	localDate: string,
 	hours: number,
 	minutes: number,
+	timezone: string,
 	offsetMinutes = 0,
 ): Date {
-	const base = new Date(
-		`${localDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(
-			2,
-			'0',
-		)}:00+08:00`,
-	);
+	const localStr = `${localDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+	const base = fromZonedTime(localStr, timezone);
 	return new Date(base.getTime() + offsetMinutes * 60_000);
 }
 
@@ -200,10 +197,10 @@ async function seedAttendanceForUser(user: SeedUser): Promise<number> {
 		const lateMin = jitter(-10, 25);
 		const overtimeMin = jitter(-15, 60);
 
-		const timeIn = localToUtcDate(date, startH, startM, lateMin);
+		const timeIn = localToUtcDate(date, startH, startM, user.timezone, lateMin);
 
 		const outDate = nightShift ? addDaysToDateString(date, 1) : date;
-		const timeOut = localToUtcDate(outDate, endH, endM, overtimeMin);
+		const timeOut = localToUtcDate(outDate, endH, endM, user.timezone, overtimeMin);
 
 		const computed = computeHours({
 			timeIn,
