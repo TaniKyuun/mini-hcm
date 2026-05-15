@@ -26,8 +26,8 @@ dist-ssr
 .docs/personal
 
 # Skills.sh
-.skills/firebase-basics
-.skills/firebase-store
-.skills/nodejs-express-server
-.skills/react-best-practices
-.skills/vercel-react-best-practices
+.agents/skills/firebase-basics
+.agents/skills/firebase-firestore
+.agents/skills/nodejs-express-server
+.agents/skills/react-best-practices
+.agents/skills/vercel-react-best-practices
