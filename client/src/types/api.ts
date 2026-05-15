@@ -1,5 +1,9 @@
 export type UserRole = 'employee' | 'admin';
 
+export type UserLocation = 'On-Site' | 'Remote' | 'Hybrid';
+
+export type EmploymentType = 'Full-time' | 'Part-time' | 'Contractual';
+
 export type UserSchedule = {
 	start: string;
 	end: string;
@@ -12,6 +16,8 @@ export type UserProfile = {
 	role: UserRole;
 	timezone: string;
 	schedule: UserSchedule;
+	location?: UserLocation;
+	employmentType?: EmploymentType;
 	createdAt: string | null;
 };
 
@@ -25,6 +31,19 @@ export type ComputedAttendance = {
 	undertimeMinutes: number;
 };
 
+export type AttendanceEditSnapshot = {
+	timeIn: string;
+	timeOut: string | null;
+};
+
+export type AttendanceEdit = {
+	at: string | null;
+	by: string;
+	reason: string | null;
+	before: AttendanceEditSnapshot;
+	after: AttendanceEditSnapshot;
+};
+
 export type AttendanceRecord = {
 	id: string;
 	userId: string;
@@ -33,6 +52,7 @@ export type AttendanceRecord = {
 	timeOut: string | null;
 	status: AttendanceStatus;
 	computed: ComputedAttendance | null;
+	edits?: AttendanceEdit[];
 	createdAt: string | null;
 	updatedAt: string | null;
 };

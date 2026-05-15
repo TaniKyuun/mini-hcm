@@ -13,8 +13,7 @@
 			"**/src/**/*",
 			"**/index.html",
 			"**/.vscode/**/*",
-			"**/vite.config.ts",
-			"!**/src/global.css"
+			"**/vite.config.ts"
 		]
 	},
 	"formatter": {

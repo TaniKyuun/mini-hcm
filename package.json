@@ -9,6 +9,8 @@
 		"setup": "bun install && bun setup:client && bun setup:server",
 		"setup:client": "cd client && bun install",
 		"setup:server": "cd server && bun install",
+		"seed": "cd server && bun run seed",
+		"seed:reset": "cd server && bun run seed:reset",
 		"lint": "biome lint",
 		"format": "biome format",
 		"check": "biome check . --reporter=github",

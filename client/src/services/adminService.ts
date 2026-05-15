@@ -56,6 +56,8 @@ export function fetchAdminAttendance(
 export type AdminAttendanceUpdateBody = {
 	timeIn?: string;
 	timeOut?: string | null;
+	reason?: string;
+	notify?: boolean;
 };
 
 export function adminUpdateAttendance(

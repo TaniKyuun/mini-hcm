@@ -6,6 +6,8 @@
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
 		"start": "bun src/index.ts",
+		"seed": "bun src/scripts/seed.ts",
+		"seed:reset": "bun src/scripts/seed.ts --reset --seed",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"keywords": [],

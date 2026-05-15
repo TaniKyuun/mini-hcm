@@ -96,6 +96,8 @@ const getAttendance: RequestHandler<
 type AdminAttendanceUpdateBody = {
 	timeIn?: string;
 	timeOut?: string | null;
+	reason?: string;
+	notify?: boolean;
 };
 
 const putAttendance: RequestHandler<
@@ -106,7 +108,12 @@ const putAttendance: RequestHandler<
 	AdminLocals
 > = async (req, res, next) => {
 	try {
-		const updated = await adminUpdateAttendance(req.params.id, req.body ?? {});
+		const actingUid = res.locals.firebaseUser.uid;
+		const updated = await adminUpdateAttendance(
+			req.params.id,
+			req.body ?? {},
+			actingUid,
+		);
 		res.json(serializeAttendance(updated.id, updated));
 	} catch (error) {
 		if (error instanceof NotFoundError) {

@@ -1,6 +1,7 @@
 import type { Timestamp } from 'firebase-admin/firestore';
 import type {
 	AttendanceDoc,
+	AttendanceEdit,
 	DailySummaryDoc,
 	UserProfile,
 } from '../types/models';
@@ -21,16 +22,28 @@ export function serializeProfile(profile: UserProfile): SerializedProfile {
 	};
 }
 
+export type SerializedAttendanceEdit = Omit<AttendanceEdit, 'at'> & {
+	at: string | null;
+};
+
 export type SerializedAttendance = Omit<
 	AttendanceDoc,
-	'timeIn' | 'timeOut' | 'createdAt' | 'updatedAt'
+	'timeIn' | 'timeOut' | 'edits' | 'createdAt' | 'updatedAt'
 > & {
 	id: string;
 	timeIn: string;
 	timeOut: string | null;
+	edits: SerializedAttendanceEdit[];
 	createdAt: string | null;
 	updatedAt: string | null;
 };
+
+function serializeEdit(edit: AttendanceEdit): SerializedAttendanceEdit {
+	return {
+		...edit,
+		at: tsToIso(edit.at),
+	};
+}
 
 export function serializeAttendance(
 	id: string,
@@ -44,6 +57,7 @@ export function serializeAttendance(
 		timeOut: tsToIso(doc.timeOut),
 		status: doc.status,
 		computed: doc.computed,
+		edits: (doc.edits ?? []).map(serializeEdit),
 		createdAt: tsToIso(doc.createdAt),
 		updatedAt: tsToIso(doc.updatedAt),
 	};

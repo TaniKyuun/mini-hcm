@@ -9,8 +9,11 @@
 		"firestore",
 		"fontsource",
 		"Merriweather",
+		"nums",
 		"oklch",
-		"shadcn"
+		"shadcn",
+		"uids",
+		"undertime"
 	],
 	"ignoreWords": [],
 	"import": []

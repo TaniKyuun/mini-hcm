@@ -1,6 +1,10 @@
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { type FormEvent, useState } from 'react';
-import { auth } from '../lib/firebase';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { auth } from '@/lib/firebase';
 
 export function SignIn() {
 	const [email, setEmail] = useState('');
@@ -24,53 +28,51 @@ export function SignIn() {
 	}
 
 	return (
-		<main className="grid min-h-screen place-items-center bg-zinc-50 px-6 py-10 text-zinc-900">
-			<section className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-				<div className="mb-6">
-					<p className="text-sm font-medium text-teal-700">mini-hcm</p>
-					<h1 className="mt-2 text-2xl font-semibold">Employee sign-in</h1>
+		<main className="grid min-h-screen place-items-center bg-muted/30 px-6 py-10 text-foreground">
+			<Card className="w-full max-w-sm">
+				<div className="px-6">
+					<p className="text-sm font-medium text-primary">mini-hcm</p>
+					<h1 className="mt-1 text-2xl font-semibold tracking-tight">
+						Employee sign-in
+					</h1>
 				</div>
 
-				<form className="space-y-4" onSubmit={handleSignIn}>
-					<label className="block">
-						<span className="text-sm font-medium text-zinc-700">Email</span>
-						<input
-							className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+				<form className="flex flex-col gap-4 px-6 pb-2" onSubmit={handleSignIn}>
+					<div className="flex flex-col gap-1.5">
+						<Label htmlFor="signin-email">Email</Label>
+						<Input
+							id="signin-email"
 							type="email"
 							value={email}
 							onChange={(event) => setEmail(event.target.value)}
 							autoComplete="email"
 							required
 						/>
-					</label>
+					</div>
 
-					<label className="block">
-						<span className="text-sm font-medium text-zinc-700">Password</span>
-						<input
-							className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+					<div className="flex flex-col gap-1.5">
+						<Label htmlFor="signin-password">Password</Label>
+						<Input
+							id="signin-password"
 							type="password"
 							value={password}
 							onChange={(event) => setPassword(event.target.value)}
 							autoComplete="current-password"
 							required
 						/>
-					</label>
+					</div>
 
 					{authError ? (
-						<p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+						<p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
 							{authError}
 						</p>
 					) : null}
 
-					<button
-						className="w-full rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-						type="submit"
-						disabled={isSubmitting}
-					>
-						{isSubmitting ? 'Signing in...' : 'Sign in'}
-					</button>
+					<Button type="submit" disabled={isSubmitting} className="w-full">
+						{isSubmitting ? 'Signing in…' : 'Sign in'}
+					</Button>
 				</form>
-			</section>
+			</Card>
 		</main>
 	);
 }

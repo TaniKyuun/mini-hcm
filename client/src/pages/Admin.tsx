@@ -1,49 +1,103 @@
+import {
+	CalendarIcon,
+	ChevronDownIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	PencilIcon,
+	PlusIcon,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { AttendanceTable } from '../components/AttendanceTable';
-import { ReportTable } from '../components/ReportTable';
-import { useAuth } from '../lib/auth';
+import { EditPunchModal } from '@/components/EditPunchModal';
+import { KpiCard } from '@/components/KpiCard';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
+import { useAuth } from '@/lib/auth';
 import {
 	adminUpdateAttendance,
 	fetchAdminAttendance,
 	fetchDailyReport,
 	fetchEmployees,
-} from '../services/adminService';
-import type { AttendanceRecord, DailySummary, UserProfile } from '../types/api';
+} from '@/services/adminService';
+import type { AttendanceRecord, DailySummary, UserProfile } from '@/types/api';
+import { addDaysIso, dateToIso, isoToDate } from '@/utils/dateIso';
+import { formatDate, formatHours, formatTimeOnly } from '@/utils/formatTime';
 
 function today(): string {
 	return new Date().toISOString().slice(0, 10);
 }
 
-function toLocalDateTimeInput(iso: string | null): string {
-	if (!iso) return '';
-	const d = new Date(iso);
-	if (Number.isNaN(d.getTime())) return '';
-	const pad = (n: number) => n.toString().padStart(2, '0');
-	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-		d.getHours(),
-	)}:${pad(d.getMinutes())}`;
+function formatViewedDate(iso: string): string {
+	if (iso === today()) return 'Today';
+	const d = isoToDate(iso);
+	if (!d) return iso;
+	return new Intl.DateTimeFormat(undefined, {
+		weekday: 'short',
+		month: 'short',
+		day: 'numeric',
+	}).format(d);
 }
 
-function fromLocalDateTimeInput(value: string): string | null {
-	if (!value) return null;
-	const parsed = new Date(value);
-	if (Number.isNaN(parsed.getTime())) return null;
-	return parsed.toISOString();
+function initialsOf(name: string): string {
+	const parts = name.trim().split(/\s+/);
+	if (parts.length === 0) return '··';
+	if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+	return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+type WorkforceStats = {
+	total: number;
+	clockedIn: number;
+	scheduled: number;
+	pending: number;
+	late: number;
+};
+
+function computeStats(
+	employees: UserProfile[],
+	summaries: DailySummary[],
+): WorkforceStats {
+	const total = employees.length;
+	const scheduled = total;
+	let clockedIn = 0;
+	let late = 0;
+	let pending = 0;
+	for (const s of summaries) {
+		if (s.sessionsCount > 0) clockedIn += 1;
+		if (s.lateMinutes > 0) late += 1;
+		if (s.totalHours === 0 && s.sessionsCount === 0) pending += 1;
+	}
+	return { total, clockedIn, scheduled, pending, late };
 }
 
 export function Admin() {
 	const { user } = useAuth();
 	const [date, setDate] = useState(today());
+	const [datePickerOpen, setDatePickerOpen] = useState(false);
 	const [employees, setEmployees] = useState<UserProfile[]>([]);
 	const [summaries, setSummaries] = useState<DailySummary[]>([]);
-	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-	const [sessions, setSessions] = useState<AttendanceRecord[]>([]);
+	const [sessions, setSessions] = useState<Record<string, AttendanceRecord[]>>(
+		{},
+	);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [editing, setEditing] = useState<AttendanceRecord | null>(null);
-	const [editTimeIn, setEditTimeIn] = useState('');
-	const [editTimeOut, setEditTimeOut] = useState('');
 	const [editBusy, setEditBusy] = useState(false);
+	const [editError, setEditError] = useState<string | null>(null);
 
 	const loadReport = useCallback(async () => {
 		if (!user) return;
@@ -56,6 +110,19 @@ export function Admin() {
 			]);
 			setEmployees(empResult.employees);
 			setSummaries(reportResult.summaries);
+
+			const sessionsByUser: Record<string, AttendanceRecord[]> = {};
+			await Promise.all(
+				empResult.employees.map(async (emp) => {
+					try {
+						const r = await fetchAdminAttendance(user, emp.uid, date, date);
+						sessionsByUser[emp.uid] = r.sessions;
+					} catch {
+						sessionsByUser[emp.uid] = [];
+					}
+				}),
+			);
+			setSessions(sessionsByUser);
 		} catch (caught) {
 			setError(caught instanceof Error ? caught.message : 'Unknown error');
 		} finally {
@@ -63,182 +130,265 @@ export function Admin() {
 		}
 	}, [user, date]);
 
-	const loadSessionsForSelected = useCallback(async () => {
-		if (!user || !selectedUserId) {
-			setSessions([]);
-			return;
-		}
-		try {
-			const result = await fetchAdminAttendance(
-				user,
-				selectedUserId,
-				date,
-				date,
-			);
-			setSessions(result.sessions);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : 'Unknown error');
-		}
-	}, [user, selectedUserId, date]);
-
 	useEffect(() => {
 		void loadReport();
 	}, [loadReport]);
 
-	useEffect(() => {
-		void loadSessionsForSelected();
-	}, [loadSessionsForSelected]);
-
 	function openEdit(record: AttendanceRecord) {
 		setEditing(record);
-		setEditTimeIn(toLocalDateTimeInput(record.timeIn));
-		setEditTimeOut(toLocalDateTimeInput(record.timeOut));
+		setEditError(null);
 	}
 
-	async function saveEdit() {
+	async function saveEdit(body: {
+		timeIn?: string;
+		timeOut?: string | null;
+		reason?: string;
+		notify?: boolean;
+	}) {
 		if (!user || !editing) return;
 		setEditBusy(true);
-		setError(null);
+		setEditError(null);
 		try {
-			const body: { timeIn?: string; timeOut?: string | null } = {};
-			const newIn = fromLocalDateTimeInput(editTimeIn);
-			if (newIn) body.timeIn = newIn;
-			body.timeOut = editTimeOut ? fromLocalDateTimeInput(editTimeOut) : null;
-
-			await adminUpdateAttendance(user, editing.id, body);
+			await adminUpdateAttendance(user, editing.id, {
+				timeIn: body.timeIn,
+				timeOut: body.timeOut,
+				reason: body.reason,
+				notify: body.notify,
+			});
 			setEditing(null);
-			await Promise.all([loadReport(), loadSessionsForSelected()]);
+			await loadReport();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : 'Unknown error');
+			setEditError(caught instanceof Error ? caught.message : 'Unknown error');
 		} finally {
 			setEditBusy(false);
 		}
 	}
 
-	const selectedEmployee = employees.find((e) => e.uid === selectedUserId);
+	const stats = computeStats(employees, summaries);
+	const summariesByUser = new Map(summaries.map((s) => [s.userId, s]));
 
 	return (
-		<div className="space-y-6">
-			<div className="flex flex-wrap items-end justify-between gap-4">
+		<div className="flex flex-col gap-6 px-4 lg:px-6">
+			<div className="flex flex-wrap items-end justify-between gap-3">
 				<div>
-					<h2 className="text-xl font-semibold text-zinc-900">Admin reports</h2>
-					<p className="text-sm text-zinc-500">
-						Daily metrics across all employees.
+					<h1 className="text-2xl font-semibold tracking-tight">
+						Admin dashboard
+					</h1>
+					<p className="text-sm text-muted-foreground">
+						Overview of workforce activity · {formatDate(date)}
 					</p>
 				</div>
-				<label className="block">
-					<span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-						Report date
-					</span>
-					<input
-						type="date"
-						value={date}
-						onChange={(e) => setDate(e.target.value)}
-						className="mt-1 block rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-					/>
-				</label>
+				<div className="flex flex-wrap items-center gap-2">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						onClick={() => setDate(addDaysIso(date, -1))}
+						aria-label="Previous day"
+					>
+						<ChevronLeftIcon />
+					</Button>
+					<Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+						<PopoverTrigger
+							render={
+								<Button
+									variant="outline"
+									size="sm"
+									className="justify-between font-normal"
+								/>
+							}
+						>
+							<CalendarIcon />
+							{formatViewedDate(date)}
+							<ChevronDownIcon />
+						</PopoverTrigger>
+						<PopoverContent className="w-auto overflow-hidden p-0" align="end">
+							<Calendar
+								mode="single"
+								selected={isoToDate(date)}
+								defaultMonth={isoToDate(date)}
+								onSelect={(d) => {
+									if (d) setDate(dateToIso(d));
+									setDatePickerOpen(false);
+								}}
+							/>
+						</PopoverContent>
+					</Popover>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						onClick={() => setDate(addDaysIso(date, 1))}
+						aria-label="Next day"
+					>
+						<ChevronRightIcon />
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setDate(today())}
+						disabled={date === today()}
+					>
+						Today
+					</Button>
+					<Button size="sm">
+						<PlusIcon />
+						Add employee
+					</Button>
+				</div>
 			</div>
 
 			{error ? (
-				<p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+				<p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
 					{error}
 				</p>
 			) : null}
 
-			{loading ? (
-				<p className="text-sm text-zinc-500">Loading report...</p>
-			) : (
-				<ReportTable employees={employees} summaries={summaries} />
-			)}
+			<div className="grid grid-cols-2 gap-3 @4xl/main:grid-cols-4">
+				<KpiCard
+					label="Total workforce"
+					value={String(stats.total)}
+					hint={`${stats.scheduled} scheduled`}
+				/>
+				<KpiCard
+					label="Clocked in"
+					value={String(stats.clockedIn)}
+					hint={`of ${stats.scheduled} scheduled`}
+				/>
+				<KpiCard
+					label="Pending"
+					value={String(stats.pending)}
+					hint="no punch yet"
+					accent="primary"
+				/>
+				<KpiCard
+					label="Late today"
+					value={String(stats.late)}
+					hint="incidents"
+				/>
+			</div>
 
-			<section className="space-y-3">
-				<div className="flex flex-wrap items-end gap-3">
-					<label className="block">
-						<span className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-							Inspect employee
-						</span>
-						<select
-							className="mt-1 block rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-							value={selectedUserId ?? ''}
-							onChange={(e) => setSelectedUserId(e.target.value || null)}
-						>
-							<option value="">Select…</option>
-							{employees.map((e) => (
-								<option key={e.uid} value={e.uid}>
-									{e.name} ({e.email})
-								</option>
-							))}
-						</select>
-					</label>
-					{selectedEmployee ? (
-						<p className="text-sm text-zinc-500">
-							Schedule {selectedEmployee.schedule.start} –{' '}
-							{selectedEmployee.schedule.end} · {selectedEmployee.timezone}
-						</p>
-					) : null}
+			<div className="flex flex-col gap-3">
+				<div className="flex flex-wrap items-center gap-3">
+					<h2 className="text-sm font-semibold">Today's attendance</h2>
+					<Badge variant="outline">{employees.length} people</Badge>
 				</div>
+				<div className="w-full">
+					<div className="[&>div]:rounded-sm [&>div]:border">
+						<Table>
+							<TableHeader>
+								<TableRow className="hover:bg-transparent">
+									<TableHead>Name</TableHead>
+									<TableHead>Clock in</TableHead>
+									<TableHead>Clock out</TableHead>
+									<TableHead className="text-right">Total</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead className="text-right" />
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{loading && employees.length === 0 ? (
+									<TableRow>
+										<TableCell
+											colSpan={6}
+											className="py-8 text-center text-muted-foreground"
+										>
+											Loading…
+										</TableCell>
+									</TableRow>
+								) : null}
+								{employees.map((emp) => {
+									const empSessions = sessions[emp.uid] ?? [];
+									const latest = empSessions[empSessions.length - 1];
+									const summary = summariesByUser.get(emp.uid);
+									const onShift = empSessions.some(
+										(s) => s.status === 'active',
+									);
+									const isLate = (summary?.lateMinutes ?? 0) > 0;
+									const absent = empSessions.length === 0;
 
-				{selectedUserId ? (
-					<AttendanceTable
-						records={sessions}
-						timezone={selectedEmployee?.timezone}
-						emptyMessage="No sessions on this date for the selected employee."
-						onEdit={openEdit}
-					/>
-				) : null}
-			</section>
-
-			{editing ? (
-				<div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 px-4">
-					<div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-						<h3 className="text-lg font-semibold text-zinc-900">Edit punch</h3>
-						<p className="mt-1 text-xs text-zinc-500">
-							Session ID: {editing.id}
-						</p>
-
-						<label className="mt-4 block">
-							<span className="text-sm font-medium text-zinc-700">Time in</span>
-							<input
-								type="datetime-local"
-								value={editTimeIn}
-								onChange={(e) => setEditTimeIn(e.target.value)}
-								className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-							/>
-						</label>
-
-						<label className="mt-3 block">
-							<span className="text-sm font-medium text-zinc-700">
-								Time out (leave blank to keep active)
-							</span>
-							<input
-								type="datetime-local"
-								value={editTimeOut}
-								onChange={(e) => setEditTimeOut(e.target.value)}
-								className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
-							/>
-						</label>
-
-						<div className="mt-6 flex justify-end gap-2">
-							<button
-								type="button"
-								className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm font-medium transition hover:bg-zinc-100"
-								onClick={() => setEditing(null)}
-								disabled={editBusy}
-							>
-								Cancel
-							</button>
-							<button
-								type="button"
-								className="rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-								onClick={() => void saveEdit()}
-								disabled={editBusy}
-							>
-								{editBusy ? 'Saving...' : 'Save'}
-							</button>
-						</div>
+									return (
+										<TableRow key={emp.uid}>
+											<TableCell>
+												<div className="flex items-center gap-3">
+													<Avatar>
+														<AvatarFallback className="text-xs">
+															{initialsOf(emp.name)}
+														</AvatarFallback>
+													</Avatar>
+													<div className="font-medium">{emp.name}</div>
+												</div>
+											</TableCell>
+											<TableCell className="font-mono tabular-nums">
+												{latest
+													? formatTimeOnly(latest.timeIn, emp.timezone)
+													: '—'}
+											</TableCell>
+											<TableCell className="font-mono tabular-nums">
+												{latest?.timeOut
+													? formatTimeOnly(latest.timeOut, emp.timezone)
+													: '—'}
+											</TableCell>
+											<TableCell className="text-right font-mono tabular-nums">
+												{formatHours(summary?.totalHours ?? 0)}h
+											</TableCell>
+											<TableCell>
+												{onShift ? (
+													<Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400">
+														● on shift
+													</Badge>
+												) : isLate ? (
+													<Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/15 dark:text-amber-400">
+														late {summary?.lateMinutes}m
+													</Badge>
+												) : absent ? (
+													<Badge variant="destructive">absent</Badge>
+												) : (
+													<Badge variant="secondary">completed</Badge>
+												)}
+											</TableCell>
+											<TableCell className="text-right">
+												{latest ? (
+													<Button
+														variant="outline"
+														size="xs"
+														onClick={() => openEdit(latest)}
+													>
+														<PencilIcon />
+														Edit
+													</Button>
+												) : null}
+											</TableCell>
+										</TableRow>
+									);
+								})}
+								{!loading && employees.length === 0 ? (
+									<TableRow>
+										<TableCell
+											colSpan={6}
+											className="py-8 text-center text-muted-foreground"
+										>
+											No employees yet.
+										</TableCell>
+									</TableRow>
+								) : null}
+							</TableBody>
+						</Table>
 					</div>
 				</div>
-			) : null}
+			</div>
+
+			<EditPunchModal
+				open={!!editing}
+				record={editing}
+				employee={
+					editing
+						? (employees.find((e) => e.uid === editing.userId) ?? null)
+						: null
+				}
+				busy={editBusy}
+				error={editError}
+				onOpenChange={(open) => !open && setEditing(null)}
+				onSave={(body) => void saveEdit(body)}
+			/>
 		</div>
 	);
 }

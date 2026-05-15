@@ -4,10 +4,12 @@ import { ATTENDANCE_COLLECTION } from '../lib/constants';
 import { getFirestoreDb } from '../lib/firebase';
 import type {
 	AttendanceDoc,
+	AttendanceEdit,
 	ComputedAttendance,
 	UserProfile,
 } from '../types/models';
 import { computeHours } from './computeService';
+import { notifyEmployeeOfEdit } from './notificationService';
 import { writeDailySummary } from './summaryService';
 import { getUserProfile } from './userService';
 
@@ -126,11 +128,16 @@ export async function getHistory(
 export type AdminUpdateAttendanceInput = {
 	timeIn?: string;
 	timeOut?: string | null;
+	reason?: string;
+	notify?: boolean;
 };
+
+const REASON_MAX_LENGTH = 500;
 
 export async function adminUpdateAttendance(
 	id: string,
 	input: AdminUpdateAttendanceInput,
+	actingUid: string,
 ): Promise<AttendanceWithId> {
 	const db = getFirestoreDb();
 	const ref = db.collection(ATTENDANCE_COLLECTION).doc(id);
@@ -146,11 +153,10 @@ export async function adminUpdateAttendance(
 		throw new NotFoundError('User profile not found for this attendance.');
 	}
 
-	const nextTimeIn = parseDateOrThrow(input.timeIn, existing.timeIn.toDate());
-	const nextTimeOut = parseTimeOutOrThrow(
-		input.timeOut,
-		existing.timeOut?.toDate() ?? null,
-	);
+	const prevTimeIn = existing.timeIn.toDate();
+	const prevTimeOut = existing.timeOut?.toDate() ?? null;
+	const nextTimeIn = parseDateOrThrow(input.timeIn, prevTimeIn);
+	const nextTimeOut = parseTimeOutOrThrow(input.timeOut, prevTimeOut);
 
 	let computed: ComputedAttendance | null = null;
 	let status: AttendanceDoc['status'] = 'active';
@@ -166,12 +172,28 @@ export async function adminUpdateAttendance(
 
 	const nextDate = formatInTimeZone(nextTimeIn, profile.timezone, 'yyyy-MM-dd');
 
+	const reason = normalizeReason(input.reason);
+	const edit: AttendanceEdit = {
+		at: Timestamp.now(),
+		by: actingUid,
+		reason,
+		before: {
+			timeIn: prevTimeIn.toISOString(),
+			timeOut: prevTimeOut ? prevTimeOut.toISOString() : null,
+		},
+		after: {
+			timeIn: nextTimeIn.toISOString(),
+			timeOut: nextTimeOut ? nextTimeOut.toISOString() : null,
+		},
+	};
+
 	await ref.update({
 		timeIn: Timestamp.fromDate(nextTimeIn),
 		timeOut: nextTimeOut ? Timestamp.fromDate(nextTimeOut) : null,
 		status,
 		computed,
 		date: nextDate,
+		edits: FieldValue.arrayUnion(edit),
 		updatedAt: FieldValue.serverTimestamp(),
 	});
 
@@ -180,8 +202,19 @@ export async function adminUpdateAttendance(
 		await writeDailySummary(db, existing.userId, existing.date);
 	}
 
+	if (input.notify) {
+		notifyEmployeeOfEdit(existing.userId, reason);
+	}
+
 	const updated = await ref.get();
 	return { id, ...(updated.data() as AttendanceDoc) };
+}
+
+function normalizeReason(value: string | undefined): string | null {
+	if (typeof value !== 'string') return null;
+	const trimmed = value.trim();
+	if (!trimmed) return null;
+	return trimmed.slice(0, REASON_MAX_LENGTH);
 }
 
 export async function adminListAttendance(
