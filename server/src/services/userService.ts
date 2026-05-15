@@ -63,6 +63,9 @@ export async function updateOwnProfile(
 		sanitized.name = updates.name.trim();
 	}
 	if (typeof updates.timezone === 'string' && updates.timezone.length > 0) {
+		if (!isValidTimezone(updates.timezone)) {
+			throw new Error(`Invalid timezone: ${updates.timezone}`);
+		}
 		sanitized.timezone = updates.timezone;
 	}
 	if (updates.schedule && isValidSchedule(updates.schedule)) {
@@ -100,6 +103,9 @@ export async function adminUpdateProfile(
 		sanitized.role = updates.role;
 	}
 	if (typeof updates.timezone === 'string' && updates.timezone.length > 0) {
+		if (!isValidTimezone(updates.timezone)) {
+			throw new Error(`Invalid timezone: ${updates.timezone}`);
+		}
 		sanitized.timezone = updates.timezone;
 	}
 	if (updates.schedule && isValidSchedule(updates.schedule)) {
@@ -120,6 +126,15 @@ export async function listAllProfiles(): Promise<UserProfile[]> {
 	return snapshot.docs.map((doc) => doc.data() as UserProfile);
 }
 
+function isValidTimezone(tz: string): boolean {
+	try {
+		Intl.DateTimeFormat(undefined, { timeZone: tz });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 function isValidSchedule(value: unknown): value is UserSchedule {
 	if (!value || typeof value !== 'object') {
 		return false;
@@ -128,7 +143,7 @@ function isValidSchedule(value: unknown): value is UserSchedule {
 	return (
 		typeof v.start === 'string' &&
 		typeof v.end === 'string' &&
-		/^\d{2}:\d{2}$/.test(v.start) &&
-		/^\d{2}:\d{2}$/.test(v.end)
+		/^([01]\d|2[0-3]):[0-5]\d$/.test(v.start) &&
+		/^([01]\d|2[0-3]):[0-5]\d$/.test(v.end)
 	);
 }

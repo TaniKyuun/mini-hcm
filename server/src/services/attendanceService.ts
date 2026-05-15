@@ -48,28 +48,36 @@ export async function findActiveSession(
 
 export async function punchIn(profile: UserProfile): Promise<AttendanceWithId> {
 	const db = getFirestoreDb();
-	const existing = await findActiveSession(profile.uid);
-	if (existing) {
-		throw new AttendanceConflictError('User already has an active session.');
-	}
-
 	const now = new Date();
 	const localDate = formatInTimeZone(now, profile.timezone, 'yyyy-MM-dd');
 	const docId = `${profile.uid}_${localDate}_${now.getTime()}`;
+	const newRef = db.collection(ATTENDANCE_COLLECTION).doc(docId);
 
-	const payload: AttendanceDoc = {
-		userId: profile.uid,
-		date: localDate,
-		timeIn: Timestamp.fromDate(now),
-		timeOut: null,
-		status: 'active',
-		computed: null,
-		createdAt: FieldValue.serverTimestamp() as unknown as Timestamp,
-		updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
-	};
+	await db.runTransaction(async (tx) => {
+		const activeSnap = await tx.get(
+			db
+				.collection(ATTENDANCE_COLLECTION)
+				.where('userId', '==', profile.uid)
+				.where('status', '==', 'active')
+				.limit(1),
+		);
+		if (!activeSnap.empty) {
+			throw new AttendanceConflictError('User already has an active session.');
+		}
+		const payload: AttendanceDoc = {
+			userId: profile.uid,
+			date: localDate,
+			timeIn: Timestamp.fromDate(now),
+			timeOut: null,
+			status: 'active',
+			computed: null,
+			createdAt: FieldValue.serverTimestamp() as unknown as Timestamp,
+			updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
+		};
+		tx.set(newRef, payload);
+	});
 
-	await db.collection(ATTENDANCE_COLLECTION).doc(docId).set(payload);
-	const created = await db.collection(ATTENDANCE_COLLECTION).doc(docId).get();
+	const created = await newRef.get();
 	return { id: docId, ...(created.data() as AttendanceDoc) };
 }
 
@@ -161,6 +169,9 @@ export async function adminUpdateAttendance(
 	let computed: ComputedAttendance | null = null;
 	let status: AttendanceDoc['status'] = 'active';
 	if (nextTimeOut) {
+		if (nextTimeOut <= nextTimeIn) {
+			throw new Error('timeOut must be after timeIn.');
+		}
 		computed = computeHours({
 			timeIn: nextTimeIn,
 			timeOut: nextTimeOut,

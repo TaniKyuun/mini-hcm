@@ -1,8 +1,4 @@
-import {
-	FieldValue,
-	type Firestore,
-	type Timestamp,
-} from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,
@@ -152,7 +148,7 @@ function emptyDailySummary(uid: string, date: string): DailySummaryDoc {
 		undertimeMinutes: 0,
 		totalHours: 0,
 		sessionsCount: 0,
-		updatedAt: null as unknown as Timestamp,
+		updatedAt: null,
 	};
 }
 
