@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AttendanceTable } from '@/components/AttendanceTable';
+import { DailyAttendanceTable } from '@/components/DailyAttendanceTable';
 import { KpiCard } from '@/components/KpiCard';
 import { PunchCard } from '@/components/PunchCard';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useProfile } from '@/hooks/useProfile';
+import { useWeeklySummary } from '@/hooks/useWeeklySummary';
 import { useAuth } from '@/lib/auth';
 import { fetchHistory } from '@/services/attendanceService';
 import type { AttendanceRecord } from '@/types/api';
+import { addDaysIso, dateToIso } from '@/utils/dateIso';
 import {
 	formatDate,
 	formatDurationWithSeconds,
@@ -15,17 +17,11 @@ import {
 } from '@/utils/formatTime';
 
 function daysAgoIso(days: number): string {
-	const d = new Date();
-	d.setUTCDate(d.getUTCDate() - days);
-	return d.toISOString().slice(0, 10);
+	return addDaysIso(dateToIso(new Date()), -days);
 }
 
 function todayIso(): string {
-	const t = new Date();
-	const y = t.getFullYear();
-	const m = String(t.getMonth() + 1).padStart(2, '0');
-	const d = String(t.getDate()).padStart(2, '0');
-	return `${y}-${m}-${d}`;
+	return dateToIso(new Date());
 }
 
 function sessionDurationMs(s: AttendanceRecord, nowMs: number): number {
@@ -39,6 +35,9 @@ export function Dashboard() {
 	const navigate = useNavigate();
 	const { profile } = useProfile();
 	const { session, setSession, refresh: refreshSession } = useActiveSession();
+	const weeklyStartDate = useMemo(() => daysAgoIso(6), []);
+	const { days: weeklyDays, refresh: refreshWeekly } =
+		useWeeklySummary(weeklyStartDate);
 
 	const [recent, setRecent] = useState<AttendanceRecord[]>([]);
 	const [now, setNow] = useState(() => Date.now());
@@ -77,6 +76,7 @@ export function Dashboard() {
 		setSession(next);
 		void refreshSession();
 		void loadRecent();
+		void refreshWeekly();
 	}
 
 	const today = todayIso();
@@ -105,9 +105,17 @@ export function Dashboard() {
 
 	const scheduleLabel = profile
 		? `${profile.schedule.start} – ${profile.schedule.end}`
-		: '—';
+		: '-';
 
-	const recentForTable = useMemo(() => recent.slice(0, 6), [recent]);
+	// Server returns ascending (oldest → newest); the table renders newest first.
+	// Filter out empty days so the row isn't all dashes.
+	const weeklyRows = useMemo(
+		() =>
+			[...weeklyDays]
+				.reverse()
+				.filter((d) => d.sessionsCount > 0 || d.date === today),
+		[weeklyDays, today],
+	);
 
 	const greeting = (() => {
 		const hour = new Date().getHours();
@@ -178,7 +186,7 @@ export function Dashboard() {
 													now,
 												),
 											)
-										: '—'
+										: '-'
 							}
 							hint={
 								isLive && session
@@ -209,12 +217,12 @@ export function Dashboard() {
 						</Link>
 					</div>
 				</div>
-				<AttendanceTable
-					records={recentForTable}
+				<DailyAttendanceTable
+					days={weeklyRows}
 					timezone={profile?.timezone}
 					emptyMessage="No sessions in the last 7 days."
-					onViewDetails={(record) =>
-						navigate(`/history?date=${encodeURIComponent(record.date)}`)
+					onViewDetails={(day) =>
+						navigate(`/history?date=${encodeURIComponent(day.date)}`)
 					}
 				/>
 			</section>

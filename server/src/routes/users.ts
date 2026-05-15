@@ -7,6 +7,7 @@ import {
 import {
 	getOrCreateUserProfile,
 	updateOwnProfile,
+	ValidationError,
 } from '../services/userService';
 
 const getMe: RequestHandler<
@@ -47,6 +48,10 @@ const putMe: RequestHandler<
 		const updated = await updateOwnProfile(uid, req.body ?? {});
 		res.json(serializeProfile(updated));
 	} catch (error) {
+		if (error instanceof ValidationError) {
+			res.status(400).json({ error: error.message, field: error.field });
+			return;
+		}
 		next(error);
 	}
 };

@@ -4,9 +4,9 @@ A lightweight Human Capital Management (HCM) app for employee time tracking. Bui
 
 ## Stack
 
-- **Frontend** — React 19, Vite 8, Tailwind CSS 4, TypeScript
-- **Backend** — Express.js 5, TypeScript, Firebase Admin SDK
-- **Package manager** — Bun
+- **Frontend** - React 19, Vite 8, Tailwind CSS 4, TypeScript
+- **Backend** - Express.js 5, TypeScript, Firebase Admin SDK
+- **Package manager** - Bun
 
 ## Getting Started
 

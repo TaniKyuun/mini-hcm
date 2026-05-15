@@ -1,4 +1,8 @@
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import {
+	FieldValue,
+	type Firestore,
+	Timestamp,
+} from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,
@@ -29,6 +33,8 @@ export async function writeDailySummary(
 		lateMinutes: 0,
 		undertimeMinutes: 0,
 	};
+	let firstTimeIn: Timestamp | null = null;
+	let lastTimeOut: Timestamp | null = null;
 
 	for (const doc of sessionsSnapshot.docs) {
 		const data = doc.data() as AttendanceDoc;
@@ -38,6 +44,18 @@ export async function writeDailySummary(
 		totals.nightDifferentialHours += data.computed.nightDifferentialHours;
 		totals.lateMinutes += data.computed.lateMinutes;
 		totals.undertimeMinutes += data.computed.undertimeMinutes;
+		if (
+			data.timeIn &&
+			(!firstTimeIn || data.timeIn.toMillis() < firstTimeIn.toMillis())
+		) {
+			firstTimeIn = data.timeIn;
+		}
+		if (
+			data.timeOut &&
+			(!lastTimeOut || data.timeOut.toMillis() > lastTimeOut.toMillis())
+		) {
+			lastTimeOut = data.timeOut;
+		}
 	}
 
 	const summary = {
@@ -54,17 +72,23 @@ export async function writeDailySummary(
 				totals.nightDifferentialHours,
 		),
 		sessionsCount: sessionsSnapshot.size,
-		updatedAt: FieldValue.serverTimestamp(),
+		firstTimeIn,
+		lastTimeOut,
 	};
 
 	const docId = `${uid}_${date}`;
-	await db.collection(DAILY_SUMMARY_COLLECTION).doc(docId).set(summary);
-
-	const created = await db
+	await db
 		.collection(DAILY_SUMMARY_COLLECTION)
 		.doc(docId)
-		.get();
-	return created.data() as DailySummaryDoc;
+		.set({
+			...summary,
+			updatedAt: FieldValue.serverTimestamp(),
+		});
+
+	return {
+		...summary,
+		updatedAt: Timestamp.now(),
+	};
 }
 
 export async function readDailySummary(
@@ -87,11 +111,12 @@ export async function readWeeklySummaries(
 	const dates = buildWeekDates(startDate);
 	const db = getFirestoreDb();
 
-	const snapshots = await Promise.all(
-		dates.map((date) =>
-			db.collection(DAILY_SUMMARY_COLLECTION).doc(`${uid}_${date}`).get(),
-		),
+	// `getAll` issues a single RPC for all 7 docs (vs 7 parallel round-trips).
+	// Doc-read billing is the same, but latency and connection overhead drop.
+	const refs = dates.map((date) =>
+		db.collection(DAILY_SUMMARY_COLLECTION).doc(`${uid}_${date}`),
 	);
+	const snapshots = await db.getAll(...refs);
 
 	return snapshots.map((snapshot, index) => {
 		if (snapshot.exists) {
@@ -148,6 +173,8 @@ function emptyDailySummary(uid: string, date: string): DailySummaryDoc {
 		undertimeMinutes: 0,
 		totalHours: 0,
 		sessionsCount: 0,
+		firstTimeIn: null,
+		lastTimeOut: null,
 		updatedAt: null,
 	};
 }

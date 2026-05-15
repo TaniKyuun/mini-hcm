@@ -1,7 +1,7 @@
 /**
  * Client-side port of `server/src/services/computeService.ts`.
  *
- * Server is the source of truth — on punch-out it runs `computeHours` and writes
+ * Server is the source of truth - on punch-out it runs `computeHours` and writes
  * the result into `attendance.computed`, then sums all completed sessions for
  * the day into `dailySummary`. The dashboard reads that summary, so an open /
  * active session contributes nothing until it's closed.
@@ -17,6 +17,7 @@
  */
 
 import type { ComputedAttendance, UserSchedule } from '@/types/api';
+import { addDaysIso } from '@/utils/dateIso';
 
 const NIGHT_DIFFERENTIAL_START = '22:00';
 const NIGHT_DIFFERENTIAL_END = '06:00';
@@ -173,9 +174,7 @@ function localToUtc(
 }
 
 function addDays(dateStr: string, days: number): string {
-	const d = new Date(`${dateStr}T12:00:00Z`);
-	d.setUTCDate(d.getUTCDate() + days);
-	return d.toISOString().slice(0, 10);
+	return addDaysIso(dateStr, days);
 }
 
 function intervalIntersection(

@@ -1,7 +1,6 @@
 import {
 	ArrowRightIcon,
 	CalendarIcon,
-	CoffeeIcon,
 	PlayIcon,
 	StopCircleIcon,
 } from 'lucide-react';
@@ -129,14 +128,6 @@ export function PunchCard({ session, timezone, onChange }: PunchCardProps) {
 								{busy ? 'Punching in…' : 'Punch in'}
 							</Button>
 						)}
-						<Button
-							variant="outline"
-							className="h-14 px-5"
-							disabled={!isActive}
-						>
-							<CoffeeIcon />
-							Start break
-						</Button>
 					</div>
 					<Link
 						to="/history"

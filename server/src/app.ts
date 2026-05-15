@@ -3,6 +3,8 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { adminRouter } from './routes/admin';
 import { apiRouter } from './routes/api';
 import { attendanceRouter } from './routes/attendance';
+import { editRequestsRouter } from './routes/editRequests';
+import { notificationsRouter } from './routes/notifications';
 import { summaryRouter } from './routes/summary';
 import { usersRouter } from './routes/users';
 
@@ -22,6 +24,8 @@ export function createApp() {
 	app.use('/api', usersRouter);
 	app.use('/api/attendance', attendanceRouter);
 	app.use('/api/summary', summaryRouter);
+	app.use('/api/notifications', notificationsRouter);
+	app.use('/api/edit-requests', editRequestsRouter);
 	app.use('/api/admin', adminRouter);
 	app.use(notFoundHandler);
 

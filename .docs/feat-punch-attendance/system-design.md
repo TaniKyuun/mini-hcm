@@ -1,4 +1,4 @@
-# System Design — Mini HCM Time Tracking
+# System Design - Mini HCM Time Tracking
 
 ## Overview
 
@@ -81,7 +81,7 @@ Aggregated totals per employee per day. Written only by the Express backend via 
   "updatedAt": "Timestamp"
 }
 ```
-> Document ID format: `{uid}_2026-05-14` — enables direct lookup without a query.
+> Document ID format: `{uid}_2026-05-14` - enables direct lookup without a query.
 
 ---
 
@@ -92,25 +92,25 @@ All computation runs in the Express backend (`server/services/computeService.js`
 ```
 Input: timeIn (UTC), timeOut (UTC), schedule { start, end }, timezone
 
-Step 1 — Resolve scheduled boundaries in user's local timezone
+Step 1 - Resolve scheduled boundaries in user's local timezone
   scheduledStart = date at schedule.start (e.g., 09:00) → convert to UTC
   scheduledEnd   = date at schedule.end   (e.g., 18:00) → convert to UTC
 
-Step 2 — Lateness
+Step 2 - Lateness
   lateMinutes = max(0, timeIn − scheduledStart) in minutes
 
-Step 3 — Undertime
+Step 3 - Undertime
   undertimeMinutes = max(0, scheduledEnd − timeOut) in minutes
 
-Step 4 — Regular Hours (overlap of actual work with scheduled shift)
+Step 4 - Regular Hours (overlap of actual work with scheduled shift)
   effectiveStart = max(timeIn, scheduledStart)
   effectiveEnd   = min(timeOut, scheduledEnd)
   regularHours   = max(0, effectiveEnd − effectiveStart) in hours
 
-Step 5 — Overtime (work beyond shift end)
+Step 5 - Overtime (work beyond shift end)
   overtimeHours = max(0, timeOut − scheduledEnd) in hours
 
-Step 6 — Night Differential (work between 22:00–06:00 local)
+Step 6 - Night Differential (work between 22:00–06:00 local)
   Build ND windows: [22:00→23:59] and [00:00→06:00]
   ndHours = sum of intersections of [timeIn, timeOut] with each ND window
 ```
@@ -273,11 +273,11 @@ On each punch-out, re-read all sessions for that user on that date, sum the `com
 
 ## 8. Suggested Build Order
 
-1. **User details on registration** — write `users/{uid}` doc with name, role, timezone, schedule when a new user signs up
-2. **Punch In/Out endpoints** — `POST /punch-in` and `POST /punch-out` with Firestore writes
-3. **PunchCard component** — React UI that checks active session on load, shows In/Out button accordingly
-4. **computeService** — pure functions (easy to unit test)
-5. **dailySummary aggregation** — called at end of punch-out handler
-6. **Dashboard page** — KPI cards from `/api/summary/daily`
-7. **History page** — table from `/api/attendance/history`
-8. **Admin routes + Admin page** — reports and punch editing last
+1. **User details on registration** - write `users/{uid}` doc with name, role, timezone, schedule when a new user signs up
+2. **Punch In/Out endpoints** - `POST /punch-in` and `POST /punch-out` with Firestore writes
+3. **PunchCard component** - React UI that checks active session on load, shows In/Out button accordingly
+4. **computeService** - pure functions (easy to unit test)
+5. **dailySummary aggregation** - called at end of punch-out handler
+6. **Dashboard page** - KPI cards from `/api/summary/daily`
+7. **History page** - table from `/api/attendance/history`
+8. **Admin routes + Admin page** - reports and punch editing last

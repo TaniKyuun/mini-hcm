@@ -8,6 +8,7 @@
 		"start": "bun src/index.ts",
 		"seed": "bun src/scripts/seed.ts",
 		"seed:reset": "bun src/scripts/seed.ts --reset --seed",
+		"backfill:summaries": "bun src/scripts/backfillSummaries.ts",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"keywords": [],

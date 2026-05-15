@@ -28,5 +28,13 @@ service cloud.firestore {
 			allow read:  if docId.matches(request.auth.uid + '_.*') || isAdmin();
 			allow write: if false;
 		}
+
+		match /notifications/{notificationId} {
+			allow read:   if request.auth != null && resource.data.recipientUid == request.auth.uid;
+			allow update: if request.auth != null
+				&& resource.data.recipientUid == request.auth.uid
+				&& request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+			allow create, delete: if false;
+		}
 	}
 }

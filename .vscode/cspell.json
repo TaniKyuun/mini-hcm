@@ -9,11 +9,14 @@
 		"firestore",
 		"fontsource",
 		"Merriweather",
+		"njsproj",
+		"ntvs",
 		"nums",
 		"oklch",
 		"shadcn",
 		"uids",
-		"undertime"
+		"undertime",
+		"vercel"
 	],
 	"ignoreWords": [],
 	"import": []

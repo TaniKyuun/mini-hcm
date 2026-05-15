@@ -159,7 +159,7 @@ export function Profile() {
 								value={
 									profile?.createdAt
 										? formatDate(profile.createdAt.slice(0, 10))
-										: '—'
+										: '-'
 								}
 								disabled
 								className="font-mono text-xs"

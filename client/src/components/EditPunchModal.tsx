@@ -1,5 +1,5 @@
 import { ChevronDownIcon, InfoIcon, Trash2Icon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -20,6 +20,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import type { AttendanceRecord, UserProfile } from '@/types/api';
 import { isoToDate } from '@/utils/dateIso';
 import { initialsOf } from '@/utils/employeeMock';
@@ -28,6 +29,15 @@ import {
 	formatDateTime,
 	formatHoursAndMinutes,
 } from '@/utils/formatTime';
+
+const TIME_REGEX = /^\d{2}:\d{2}(:\d{2})?$/;
+const REASON_MAX_LENGTH = 500;
+
+type PunchErrors = {
+	timeIn?: string;
+	timeOut?: string;
+	reason?: string;
+};
 
 function isoToTime(iso: string | null): string {
 	if (!iso) return '';
@@ -94,6 +104,42 @@ export function EditPunchModal({
 		setNotify(true);
 	}, [record]);
 
+	const errors = useMemo<PunchErrors>(() => {
+		const e: PunchErrors = {};
+
+		if (!dateIn) {
+			e.timeIn = 'Pick a date for clock-in.';
+		} else if (!timeIn) {
+			e.timeIn = 'Pick a time for clock-in.';
+		} else if (!TIME_REGEX.test(timeIn)) {
+			e.timeIn = 'Time must be HH:MM or HH:MM:SS.';
+		}
+
+		if (dateOut) {
+			if (!timeOut) {
+				e.timeOut = 'Time is required when a clock-out date is set.';
+			} else if (!TIME_REGEX.test(timeOut)) {
+				e.timeOut = 'Time must be HH:MM or HH:MM:SS.';
+			}
+		}
+
+		if (!e.timeIn && !e.timeOut && dateIn && dateOut && timeIn && timeOut) {
+			const inIso = combineDateAndTime(dateIn, timeIn);
+			const outIso = combineDateAndTime(dateOut, timeOut);
+			if (inIso && outIso && new Date(outIso) <= new Date(inIso)) {
+				e.timeOut = 'Clock-out must be after clock-in.';
+			}
+		}
+
+		if (reason.length > REASON_MAX_LENGTH) {
+			e.reason = `Reason cannot exceed ${REASON_MAX_LENGTH} characters.`;
+		}
+
+		return e;
+	}, [dateIn, timeIn, dateOut, timeOut, reason]);
+
+	const formInvalid = Object.values(errors).some(Boolean);
+
 	if (!record) {
 		return (
 			<Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,7 +155,7 @@ export function EditPunchModal({
 				hour: '2-digit',
 				minute: '2-digit',
 			})
-		: '—';
+		: '-';
 	const isEdited = Boolean(
 		record.createdAt &&
 			record.updatedAt &&
@@ -119,6 +165,7 @@ export function EditPunchModal({
 	);
 
 	function handleSave() {
+		if (formInvalid) return;
 		const inIso = combineDateAndTime(dateIn, timeIn);
 		const outIso = dateOut ? combineDateAndTime(dateOut, timeOut) : null;
 		onSave({
@@ -140,7 +187,7 @@ export function EditPunchModal({
 					</Avatar>
 					<div className="flex-1">
 						<DialogTitle>
-							Edit punch — {employee?.name ?? 'Employee'}
+							Edit punch - {employee?.name ?? 'Employee'}
 						</DialogTitle>
 						<DialogDescription>{formatDate(record.date)}</DialogDescription>
 					</div>
@@ -151,7 +198,7 @@ export function EditPunchModal({
 						<div className="flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
 							<InfoIcon className="size-3.5 shrink-0" />
 							<span>
-								<b>Late by {lateMinutes}m</b> — original punch {originalTimeIn}.
+								<b>Late by {lateMinutes}m</b> - original punch {originalTimeIn}.
 								Adjust below if needed.
 							</span>
 						</div>
@@ -166,7 +213,11 @@ export function EditPunchModal({
 										<Button
 											variant="outline"
 											id="punch-in-date"
-											className="flex-1 justify-between font-normal"
+											aria-invalid={Boolean(errors.timeIn)}
+											className={cn(
+												'flex-1 justify-between font-normal',
+												errors.timeIn && 'border-destructive',
+											)}
 										/>
 									}
 								>
@@ -193,9 +244,16 @@ export function EditPunchModal({
 								step="1"
 								value={timeIn}
 								onChange={(e) => setTimeIn(e.target.value)}
-								className="w-32 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+								aria-invalid={Boolean(errors.timeIn)}
+								className={cn(
+									'w-32 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none',
+									errors.timeIn && 'border-destructive',
+								)}
 							/>
 						</div>
+						{errors.timeIn ? (
+							<p className="text-[11px] text-destructive">{errors.timeIn}</p>
+						) : null}
 					</div>
 
 					<div className="flex flex-col gap-3">
@@ -207,7 +265,11 @@ export function EditPunchModal({
 										<Button
 											variant="outline"
 											id="punch-out-date"
-											className="flex-1 justify-between font-normal"
+											aria-invalid={Boolean(errors.timeOut)}
+											className={cn(
+												'flex-1 justify-between font-normal',
+												errors.timeOut && 'border-destructive',
+											)}
 										/>
 									}
 								>
@@ -235,12 +297,20 @@ export function EditPunchModal({
 								value={timeOut}
 								onChange={(e) => setTimeOut(e.target.value)}
 								placeholder="not yet"
-								className="w-32 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+								aria-invalid={Boolean(errors.timeOut)}
+								className={cn(
+									'w-32 bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none',
+									errors.timeOut && 'border-destructive',
+								)}
 							/>
 						</div>
-						<p className="text-xs text-muted-foreground">
-							Leave date empty to keep this session active.
-						</p>
+						{errors.timeOut ? (
+							<p className="text-[11px] text-destructive">{errors.timeOut}</p>
+						) : (
+							<p className="text-xs text-muted-foreground">
+								Leave date empty to keep this session active.
+							</p>
+						)}
 					</div>
 
 					<div className="grid grid-cols-2 gap-3">
@@ -265,13 +335,23 @@ export function EditPunchModal({
 					</div>
 
 					<div className="flex flex-col gap-1.5">
-						<Label htmlFor="punch-reason">Reason for change</Label>
+						<Label htmlFor="punch-reason">
+							Reason for change
+							<span className="ml-2 font-normal text-muted-foreground">
+								{reason.length}/{REASON_MAX_LENGTH}
+							</span>
+						</Label>
 						<Input
 							id="punch-reason"
 							value={reason}
 							onChange={(e) => setReason(e.target.value)}
 							placeholder="e.g. Train delay (approved by manager)"
+							aria-invalid={Boolean(errors.reason)}
+							className={cn(errors.reason && 'border-destructive')}
 						/>
+						{errors.reason ? (
+							<p className="text-[11px] text-destructive">{errors.reason}</p>
+						) : null}
 					</div>
 
 					<div className="rounded-md border border-dashed bg-muted/30 p-3">
@@ -328,7 +408,7 @@ export function EditPunchModal({
 					>
 						Cancel
 					</Button>
-					<Button size="sm" onClick={handleSave} disabled={busy}>
+					<Button size="sm" onClick={handleSave} disabled={busy || formInvalid}>
 						{busy ? 'Saving…' : 'Save changes'}
 					</Button>
 				</DialogFooter>

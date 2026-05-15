@@ -6,7 +6,7 @@ export function formatDuration(milliseconds: number): string {
 	return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
 }
 
-/** Live ticker format: "Hh MMm SSs" — drops the hours segment when zero. */
+/** Live ticker format: "Hh MMm SSs" - drops the hours segment when zero. */
 export function formatDurationWithSeconds(milliseconds: number): string {
 	if (!Number.isFinite(milliseconds) || milliseconds <= 0) return '0s';
 	const totalSeconds = Math.floor(milliseconds / 1000);
@@ -41,9 +41,9 @@ export function formatMinutes(minutes: number): string {
 }
 
 export function formatDateTime(iso: string | null, timezone?: string): string {
-	if (!iso) return '—';
+	if (!iso) return '-';
 	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return '—';
+	if (Number.isNaN(date.getTime())) return '-';
 	return new Intl.DateTimeFormat(undefined, {
 		dateStyle: 'medium',
 		timeStyle: 'short',
@@ -52,9 +52,9 @@ export function formatDateTime(iso: string | null, timezone?: string): string {
 }
 
 export function formatTimeOnly(iso: string | null, timezone?: string): string {
-	if (!iso) return '—';
+	if (!iso) return '-';
 	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return '—';
+	if (Number.isNaN(date.getTime())) return '-';
 	return new Intl.DateTimeFormat(undefined, {
 		timeStyle: 'short',
 		timeZone: timezone,
@@ -62,7 +62,7 @@ export function formatTimeOnly(iso: string | null, timezone?: string): string {
 }
 
 export function formatDate(value: string | null): string {
-	if (!value) return '—';
+	if (!value) return '-';
 	const date = new Date(`${value}T12:00:00Z`);
 	if (Number.isNaN(date.getTime())) return value;
 	return new Intl.DateTimeFormat(undefined, {

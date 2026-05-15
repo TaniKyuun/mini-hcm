@@ -1,10 +1,13 @@
 import type { User } from 'firebase/auth';
 import { apiRequestJson } from '../lib/apiClient';
 import type {
+	AdminAttendanceByDateResponse,
 	AdminAttendanceResponse,
 	AttendanceRecord,
 	DailyReportResponse,
 	EmployeesResponse,
+	EmploymentType,
+	UserLocation,
 	UserProfile,
 	UserRole,
 	UserSchedule,
@@ -23,6 +26,8 @@ export type AdminUpdateProfileBody = {
 	role?: UserRole;
 	timezone?: string;
 	schedule?: UserSchedule;
+	location?: UserLocation;
+	employmentType?: EmploymentType;
 };
 
 export function adminUpdateEmployee(
@@ -34,6 +39,35 @@ export function adminUpdateEmployee(
 		method: 'PUT',
 		body,
 	});
+}
+
+export type CreateEmployeeBody = {
+	name: string;
+	email: string;
+	password: string;
+	role?: UserRole;
+	timezone?: string;
+	schedule?: UserSchedule;
+	location?: UserLocation;
+	employmentType?: EmploymentType;
+};
+
+export function createEmployee(user: User, body: CreateEmployeeBody) {
+	return apiRequestJson<UserProfile>(user, '/api/admin/employees', {
+		method: 'POST',
+		body,
+	});
+}
+
+export function triggerTestNotification(user: User, recipientUid?: string) {
+	return apiRequestJson<{ id: string; recipientUid: string }>(
+		user,
+		'/api/admin/notifications/test',
+		{
+			method: 'POST',
+			body: recipientUid ? { recipientUid } : {},
+		},
+	);
 }
 
 export function fetchAdminAttendance(
@@ -49,6 +83,22 @@ export function fetchAdminAttendance(
 	return apiRequestJson<AdminAttendanceResponse>(
 		user,
 		`/api/admin/attendance?${params.toString()}`,
+		{ signal },
+	);
+}
+
+/**
+ * Single bulk query: every employee's sessions on `date` in one request.
+ * Replaces the previous "N-employees-times-one-fetch-each" pattern.
+ */
+export function fetchAdminAttendanceByDate(
+	user: User,
+	date: string,
+	signal?: AbortSignal,
+) {
+	return apiRequestJson<AdminAttendanceByDateResponse>(
+		user,
+		`/api/admin/attendance/by-date?date=${encodeURIComponent(date)}`,
 		{ signal },
 	);
 }

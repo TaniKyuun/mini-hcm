@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { RequestFixModal } from '@/components/RequestFixModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,6 +19,10 @@ import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import { fetchHistory } from '@/services/attendanceService';
+import {
+	type CreateEditRequestBody,
+	createEditRequest,
+} from '@/services/editRequestService';
 import type { AttendanceRecord } from '@/types/api';
 import { formatDate, formatHours, formatTimeOnly } from '@/utils/formatTime';
 
@@ -210,6 +216,9 @@ export function History() {
 	const [auditKind, setAuditKind] = useState<AuditKind>('All');
 	const [auditStatus, setAuditStatus] = useState<AuditStatus>('Any');
 	const [auditSort, setAuditSort] = useState<SortDir>('desc');
+	const [requestOpen, setRequestOpen] = useState(false);
+	const [requestBusy, setRequestBusy] = useState(false);
+	const [requestError, setRequestError] = useState<string | null>(null);
 
 	const load = useCallback(
 		async (signal?: AbortSignal) => {
@@ -308,6 +317,31 @@ export function History() {
 		setViewYear(t.getFullYear());
 		setViewMonth(t.getMonth());
 		setSelectedIso(isoDay(t));
+	}
+
+	function openRequest() {
+		if (!selectedCell?.record) return;
+		setRequestError(null);
+		setRequestOpen(true);
+	}
+
+	async function handleSubmitRequest(body: CreateEditRequestBody) {
+		if (!user) return;
+		setRequestBusy(true);
+		setRequestError(null);
+		try {
+			await createEditRequest(user, body);
+			setRequestOpen(false);
+			toast.success('Request submitted. An admin will review it.');
+			// Refresh the history so the "edited" badge updates after approval flows through.
+			await load();
+		} catch (caught) {
+			setRequestError(
+				caught instanceof Error ? caught.message : 'Unknown error',
+			);
+		} finally {
+			setRequestBusy(false);
+		}
 	}
 
 	return (
@@ -424,8 +458,8 @@ export function History() {
 					</div>
 				</Card>
 
-				<Card className="h-full gap-0 overflow-hidden p-0">
-					<div className="flex items-center justify-between px-4">
+				<Card className="h-full max-h-[80vh] gap-0 overflow-hidden p-0">
+					<div className="flex items-center justify-between border-b px-4 py-3">
 						<div>
 							<h2 className="text-base font-semibold">
 								{selectedCell ? formatDate(selectedCell.iso) : 'Select a day'}
@@ -457,7 +491,7 @@ export function History() {
 						) : null}
 					</div>
 
-					<div className="flex flex-col gap-2 px-4">
+					<div className="flex flex-col gap-2 px-4 py-3">
 						{selectedCell?.record ? (
 							<div className="grid grid-cols-2 gap-3">
 								<div className="flex flex-col gap-0.5 rounded-md border bg-muted/30 p-3">
@@ -576,7 +610,7 @@ export function History() {
 								</button>
 							))}
 						</div>
-						<div className="max-h-80 min-h-0 flex-1 overflow-y-auto">
+						<div className="min-h-0 flex-1 overflow-y-auto">
 							{dayAudit.length === 0 ? (
 								<div className="px-4 py-8 text-center text-xs text-muted-foreground">
 									No matching punch events for this day.
@@ -651,14 +685,32 @@ export function History() {
 					</div>
 
 					<div className="flex gap-2 border-t bg-muted/30 px-4 py-3">
-						<Button variant="outline" className="flex-1">
+						<Button
+							variant="outline"
+							className="flex-1"
+							onClick={openRequest}
+							disabled={!selectedCell?.record}
+						>
 							<PencilIcon />
 							Request fix
 						</Button>
-						<Button className="flex-1">Add note</Button>
 					</div>
 				</Card>
 			</div>
+
+			<RequestFixModal
+				open={requestOpen}
+				record={selectedCell?.record ?? null}
+				employeeName={profile?.name}
+				timezone={profile?.timezone}
+				busy={requestBusy}
+				error={requestError}
+				onOpenChange={(open) => {
+					setRequestOpen(open);
+					if (!open) setRequestError(null);
+				}}
+				onSubmit={(body) => void handleSubmitRequest(body)}
+			/>
 		</div>
 	);
 }

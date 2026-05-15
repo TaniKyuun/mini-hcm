@@ -48,6 +48,8 @@ const getDaily: RequestHandler<
 						undertimeMinutes: 0,
 						totalHours: 0,
 						sessionsCount: 0,
+						firstTimeIn: null,
+						lastTimeOut: null,
 						updatedAt: null,
 					}),
 		});

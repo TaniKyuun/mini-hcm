@@ -1,26 +1,7 @@
 import { signOut } from 'firebase/auth';
-import {
-	BellIcon,
-	CircleUserRoundIcon,
-	EllipsisVerticalIcon,
-	LogOutIcon,
-} from 'lucide-react';
+import { LogOutIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	useSidebar,
-} from '@/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuItem } from '@/components/ui/sidebar';
 import { auth } from '@/lib/firebase';
 
 function getInitials(name: string): string {
@@ -39,7 +20,6 @@ export function NavUser({
 		avatar: string;
 	};
 }) {
-	const { isMobile } = useSidebar();
 	const initials = getInitials(user.name);
 
 	async function handleSignOut() {
@@ -53,66 +33,36 @@ export function NavUser({
 	return (
 		<SidebarMenu>
 			<SidebarMenuItem>
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={
-							<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
-						}
-					>
-						<Avatar className="size-8 rounded-lg">
+				<div className="overflow-hidden rounded-md bg-sidebar-accent/40 group-data-[collapsible=icon]:bg-transparent">
+					{/* Profile */}
+					<div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:p-0">
+						<Avatar className="size-8 shrink-0 rounded-lg">
 							<AvatarImage src={user.avatar} alt={user.name} />
 							<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
 						</Avatar>
-						<div className="grid flex-1 text-left text-sm leading-tight">
-							<span className="truncate font-medium">{user.name}</span>
-							<span className="truncate text-xs text-foreground/70">
+						<div className="grid min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+							<span className="truncate text-sm font-medium">{user.name}</span>
+							<span className="truncate text-xs text-muted-foreground">
 								{user.email}
 							</span>
 						</div>
-						<EllipsisVerticalIcon className="ml-auto size-4" />
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						className="min-w-56"
-						side={isMobile ? 'bottom' : 'right'}
-						align="end"
-						sideOffset={4}
+					</div>
+
+					{/* Sign out - visually attached to the profile, destructive on hover */}
+					<button
+						type="button"
+						onClick={() => void handleSignOut()}
+						title="Sign out"
+						className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-sidebar-foreground/75 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive focus-visible:outline-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:py-2"
 					>
-						<DropdownMenuGroup>
-							<DropdownMenuLabel className="p-0 font-normal">
-								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-									<Avatar className="size-8">
-										<AvatarImage src={user.avatar} alt={user.name} />
-										<AvatarFallback className="rounded-lg">
-											{initials}
-										</AvatarFallback>
-									</Avatar>
-									<div className="grid flex-1 text-left text-sm leading-tight">
-										<span className="truncate font-medium">{user.name}</span>
-										<span className="truncate text-xs text-muted-foreground">
-											{user.email}
-										</span>
-									</div>
-								</div>
-							</DropdownMenuLabel>
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem>
-								<CircleUserRoundIcon />
-								Account
-							</DropdownMenuItem>
-							<DropdownMenuItem>
-								<BellIcon />
-								Notifications
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem onClick={() => void handleSignOut()}>
-							<LogOutIcon />
+						<span className="flex size-6 shrink-0 items-center justify-center group-data-[collapsible=icon]:size-auto">
+							<LogOutIcon className="size-4" />
+						</span>
+						<span className="group-data-[collapsible=icon]:hidden">
 							Sign out
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+						</span>
+					</button>
+				</div>
 			</SidebarMenuItem>
 		</SidebarMenu>
 	);
