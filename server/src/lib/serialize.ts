@@ -49,11 +49,17 @@ export function serializeAttendance(
 	id: string,
 	doc: AttendanceDoc,
 ): SerializedAttendance {
+	const timeIn = tsToIso(doc.timeIn);
+	if (!timeIn) {
+		throw new Error(
+			`serializeAttendance: missing required timeIn for id=${id} userId=${doc.userId}`,
+		);
+	}
 	return {
 		id,
 		userId: doc.userId,
 		date: doc.date,
-		timeIn: tsToIso(doc.timeIn) ?? new Date(0).toISOString(),
+		timeIn,
 		timeOut: tsToIso(doc.timeOut),
 		status: doc.status,
 		computed: doc.computed,
