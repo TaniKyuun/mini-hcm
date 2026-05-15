@@ -1,5 +1,5 @@
 import { signOut } from 'firebase/auth';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -198,18 +198,22 @@ function PrefRow({
 	onChange: (v: boolean) => void;
 	disabled?: boolean;
 }) {
+	const titleId = useId();
 	return (
-		<label className="flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 hover:bg-muted/30">
+		<div className="flex cursor-pointer items-start gap-3 rounded-md border bg-card px-3 py-2.5 hover:bg-muted/30">
 			<Checkbox
 				checked={checked}
 				onCheckedChange={(v) => onChange(Boolean(v))}
 				disabled={disabled}
 				className="mt-0.5"
+				aria-labelledby={titleId}
 			/>
 			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-medium">{title}</span>
+				<span id={titleId} className="text-sm font-medium">
+					{title}
+				</span>
 				<span className="text-xs text-muted-foreground">{hint}</span>
 			</div>
-		</label>
+		</div>
 	);
 }
