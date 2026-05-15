@@ -41,12 +41,13 @@ const employeeNav: NavItem[] = [
 	{ title: 'Settings', url: '/settings', icon: Settings2Icon },
 ];
 
+const adminBase = '/admin';
 const adminNav: NavItem[] = [
-	{ title: 'Dashboard', url: '/', icon: LayoutDashboardIcon },
-	{ title: 'Today', url: '/today', icon: ClockIcon },
-	{ title: 'Employees', url: '/employees', icon: UsersIcon },
-	{ title: 'Attendance', url: '/attendance', icon: ClockIcon },
-	{ title: 'Reports', url: '/reports', icon: ChartBarIcon },
+	{ title: 'Dashboard', url: adminBase, icon: LayoutDashboardIcon },
+	{ title: 'Today', url: `${adminBase}/today`, icon: ClockIcon },
+	{ title: 'Employees', url: `${adminBase}/employees`, icon: UsersIcon },
+	{ title: 'Attendance', url: `${adminBase}/attendance`, icon: ClockIcon },
+	{ title: 'Reports', url: `${adminBase}/reports`, icon: ChartBarIcon },
 	{ title: 'Profile', url: '/profile', icon: UserIcon },
 	{ title: 'Settings', url: '/settings', icon: Settings2Icon },
 ];

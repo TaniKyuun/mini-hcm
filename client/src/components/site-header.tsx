@@ -6,6 +6,11 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useProfile } from '@/hooks/useProfile';
 
 const TITLES: Record<string, string> = {
+	'/admin': 'Dashboard',
+	'/admin/today': 'Today',
+	'/admin/employees': 'Employees',
+	'/admin/attendance': 'Attendance',
+	'/admin/reports': 'Reports',
 	'/today': 'Today',
 	'/history': 'History',
 	'/profile': 'Profile',

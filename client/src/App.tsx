@@ -58,6 +58,13 @@ function App() {
 						<Route path="profile" element={<Profile />} />
 						<Route path="settings" element={<Settings />} />
 						<Route element={<AdminRoute />}>
+							<Route path="admin">
+								<Route index element={<Admin />} />
+								<Route path="today" element={<Admin />} />
+								<Route path="employees" element={<AdminPeople />} />
+								<Route path="attendance" element={<AdminAttendance />} />
+								<Route path="reports" element={<AdminReports />} />
+							</Route>
 							<Route path="employees" element={<AdminPeople />} />
 							<Route path="attendance" element={<AdminAttendance />} />
 							<Route path="reports" element={<AdminReports />} />
