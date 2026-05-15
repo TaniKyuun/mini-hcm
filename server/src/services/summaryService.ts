@@ -1,4 +1,8 @@
-import { FieldValue, type Firestore, Timestamp } from 'firebase-admin/firestore';
+import {
+	FieldValue,
+	type Firestore,
+	Timestamp,
+} from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,
@@ -40,10 +44,16 @@ export async function writeDailySummary(
 		totals.nightDifferentialHours += data.computed.nightDifferentialHours;
 		totals.lateMinutes += data.computed.lateMinutes;
 		totals.undertimeMinutes += data.computed.undertimeMinutes;
-		if (data.timeIn && (!firstTimeIn || data.timeIn.toMillis() < firstTimeIn.toMillis())) {
+		if (
+			data.timeIn &&
+			(!firstTimeIn || data.timeIn.toMillis() < firstTimeIn.toMillis())
+		) {
 			firstTimeIn = data.timeIn;
 		}
-		if (data.timeOut && (!lastTimeOut || data.timeOut.toMillis() > lastTimeOut.toMillis())) {
+		if (
+			data.timeOut &&
+			(!lastTimeOut || data.timeOut.toMillis() > lastTimeOut.toMillis())
+		) {
 			lastTimeOut = data.timeOut;
 		}
 	}

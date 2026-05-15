@@ -85,13 +85,7 @@ function HoursCell({
 	);
 }
 
-function MinutesCell({
-	minutes,
-	tone,
-}: {
-	minutes: number;
-	tone?: 'warn';
-}) {
+function MinutesCell({ minutes, tone }: { minutes: number; tone?: 'warn' }) {
 	const isZero = !minutes || minutes <= 0;
 	return (
 		<TableCell
@@ -211,10 +205,7 @@ export function DailyAttendanceTable({
 									</TableCell>
 									<HoursCell hours={day.regularHours} />
 									<HoursCell hours={day.overtimeHours} tone="primary" />
-									<HoursCell
-										hours={day.nightDifferentialHours}
-										tone="night"
-									/>
+									<HoursCell hours={day.nightDifferentialHours} tone="night" />
 									<MinutesCell minutes={day.lateMinutes} tone="warn" />
 									<TableCell
 										className={cn(

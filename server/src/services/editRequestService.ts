@@ -180,10 +180,7 @@ export async function approveEditRequest(
 	}
 	const data = snap.data() as AttendanceEditRequestDoc;
 	if (data.status !== 'pending') {
-		throw new ValidationError(
-			`Request is already ${data.status}.`,
-			'status',
-		);
+		throw new ValidationError(`Request is already ${data.status}.`, 'status');
 	}
 
 	// Apply the requested change. Any ValidationError thrown here (e.g. timeOut
@@ -254,10 +251,7 @@ export async function rejectEditRequest(
 	}
 	const data = snap.data() as AttendanceEditRequestDoc;
 	if (data.status !== 'pending') {
-		throw new ValidationError(
-			`Request is already ${data.status}.`,
-			'status',
-		);
+		throw new ValidationError(`Request is already ${data.status}.`, 'status');
 	}
 
 	const resolvedAt = Timestamp.now();

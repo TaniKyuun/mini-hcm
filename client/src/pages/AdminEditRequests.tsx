@@ -14,11 +14,7 @@ import {
 	fetchAdminEditRequests,
 	rejectEditRequest,
 } from '@/services/editRequestService';
-import type {
-	EditRequest,
-	EditRequestStatus,
-	UserProfile,
-} from '@/types/api';
+import type { EditRequest, EditRequestStatus, UserProfile } from '@/types/api';
 import { initialsOf } from '@/utils/employeeMock';
 import { formatDate, formatDateTime, formatTimeOnly } from '@/utils/formatTime';
 

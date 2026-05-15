@@ -184,9 +184,9 @@ export function RequestFixModal({
 					<div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-foreground">
 						<InfoIcon className="mt-0.5 size-3.5 shrink-0 text-primary" />
 						<span>
-							Propose new clock-in or clock-out times and explain the reason.
-							An admin reviews each request before the change is applied to
-							your record. Original times:{' '}
+							Propose new clock-in or clock-out times and explain the reason. An
+							admin reviews each request before the change is applied to your
+							record. Original times:{' '}
 							<b>{formatTimeOnly(record.timeIn, timezone)}</b>
 							{' → '}
 							<b>

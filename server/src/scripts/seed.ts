@@ -1,5 +1,9 @@
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import { type BulkWriter, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import {
+	type BulkWriter,
+	FieldValue,
+	Timestamp,
+} from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,

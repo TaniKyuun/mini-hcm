@@ -66,7 +66,8 @@ export function NotificationBell() {
 								{error}
 							</div>
 							<div className="mt-1 text-muted-foreground">
-								Make sure Firestore rules are deployed: <code>firebase deploy --only firestore:rules</code>
+								Make sure Firestore rules are deployed:{' '}
+								<code>firebase deploy --only firestore:rules</code>
 							</div>
 						</div>
 					) : null}

@@ -156,9 +156,7 @@ export function EditEmployeeDialog({
 								value={name}
 								onChange={(e) => setName(e.target.value)}
 								aria-invalid={Boolean(fieldErrors.name)}
-								className={cn(
-									fieldErrors.name && 'border-destructive',
-								)}
+								className={cn(fieldErrors.name && 'border-destructive')}
 							/>
 							{fieldErrors.name ? (
 								<p className="text-[11px] text-destructive">
@@ -174,9 +172,7 @@ export function EditEmployeeDialog({
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								aria-invalid={Boolean(fieldErrors.email)}
-								className={cn(
-									fieldErrors.email && 'border-destructive',
-								)}
+								className={cn(fieldErrors.email && 'border-destructive')}
 							/>
 							{fieldErrors.email ? (
 								<p className="text-[11px] text-destructive">
@@ -211,9 +207,7 @@ export function EditEmployeeDialog({
 							value={timezone}
 							onChange={(e) => setTimezone(e.target.value)}
 							aria-invalid={Boolean(fieldErrors.timezone)}
-							className={cn(
-								fieldErrors.timezone && 'border-destructive',
-							)}
+							className={cn(fieldErrors.timezone && 'border-destructive')}
 						/>
 						{fieldErrors.timezone ? (
 							<p className="text-[11px] text-destructive">
@@ -338,11 +332,7 @@ export function EditEmployeeDialog({
 					>
 						Cancel
 					</Button>
-					<Button
-						size="sm"
-						onClick={handleSave}
-						disabled={busy || formInvalid}
-					>
+					<Button size="sm" onClick={handleSave} disabled={busy || formInvalid}>
 						{busy ? (
 							'Saving…'
 						) : (

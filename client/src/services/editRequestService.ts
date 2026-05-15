@@ -41,11 +41,7 @@ export function fetchAdminEditRequests(
 	);
 }
 
-export function approveEditRequest(
-	user: User,
-	id: string,
-	adminNote?: string,
-) {
+export function approveEditRequest(user: User, id: string, adminNote?: string) {
 	return apiRequestJson<EditRequest>(
 		user,
 		`/api/admin/edit-requests/${id}/approve`,

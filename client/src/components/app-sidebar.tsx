@@ -48,7 +48,11 @@ const adminNav: NavItem[] = [
 	{ title: 'Today', url: `${adminBase}/today`, icon: ClockIcon },
 	{ title: 'Employees', url: `${adminBase}/employees`, icon: UsersIcon },
 	{ title: 'Attendance', url: `${adminBase}/attendance`, icon: ClockIcon },
-	{ title: 'Edit requests', url: `${adminBase}/edit-requests`, icon: InboxIcon },
+	{
+		title: 'Edit requests',
+		url: `${adminBase}/edit-requests`,
+		icon: InboxIcon,
+	},
 	{ title: 'Reports', url: `${adminBase}/reports`, icon: ChartBarIcon },
 	{ title: 'Profile', url: '/profile', icon: UserIcon },
 	{ title: 'Settings', url: '/settings', icon: Settings2Icon },

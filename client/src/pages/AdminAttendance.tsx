@@ -37,13 +37,7 @@ import {
 } from '@/utils/formatTime';
 import { isWorkingDay } from '@/utils/workingDays';
 
-type Filter =
-	| 'All'
-	| 'On shift'
-	| 'Late'
-	| 'Absent'
-	| 'Completed'
-	| 'Rest day';
+type Filter = 'All' | 'On shift' | 'Late' | 'Absent' | 'Completed' | 'Rest day';
 const FILTERS: Filter[] = [
 	'All',
 	'On shift',
@@ -693,7 +687,6 @@ export function AdminAttendance() {
 									</div>
 								))}
 							</div>
-
 						</>
 					) : (
 						<div className="flex h-full items-center justify-center px-4 py-12 text-sm text-muted-foreground">

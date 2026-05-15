@@ -93,9 +93,7 @@ function HoursCell({
 				'text-right font-mono tabular-nums',
 				isZero && 'text-muted-foreground/50',
 				!isZero && tone === 'primary' && 'text-primary',
-				!isZero &&
-					tone === 'night' &&
-					'text-indigo-600 dark:text-indigo-400',
+				!isZero && tone === 'night' && 'text-indigo-600 dark:text-indigo-400',
 				!isZero && tone === 'warn' && 'text-amber-600 dark:text-amber-400',
 			)}
 		>
@@ -104,13 +102,7 @@ function HoursCell({
 	);
 }
 
-function MinutesCell({
-	minutes,
-	tone,
-}: {
-	minutes: number;
-	tone?: 'warn';
-}) {
+function MinutesCell({ minutes, tone }: { minutes: number; tone?: 'warn' }) {
 	const isZero = !minutes || minutes <= 0;
 	return (
 		<TableCell

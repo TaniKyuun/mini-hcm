@@ -14,11 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { CreateEmployeeBody } from '@/services/adminService';
-import type {
-	EmploymentType,
-	UserLocation,
-	UserRole,
-} from '@/types/api';
+import type { EmploymentType, UserLocation, UserRole } from '@/types/api';
 import {
 	type FieldErrors,
 	hasErrors,

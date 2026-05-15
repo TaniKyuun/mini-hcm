@@ -408,11 +408,7 @@ export function EditPunchModal({
 					>
 						Cancel
 					</Button>
-					<Button
-						size="sm"
-						onClick={handleSave}
-						disabled={busy || formInvalid}
-					>
+					<Button size="sm" onClick={handleSave} disabled={busy || formInvalid}>
 						{busy ? 'Saving…' : 'Save changes'}
 					</Button>
 				</DialogFooter>

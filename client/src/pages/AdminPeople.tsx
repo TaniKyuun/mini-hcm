@@ -362,7 +362,10 @@ export function AdminPeople() {
 													admin
 												</Badge>
 											) : (
-												<Badge variant="outline" className="text-muted-foreground">
+												<Badge
+													variant="outline"
+													className="text-muted-foreground"
+												>
 													employee
 												</Badge>
 											)}
@@ -395,9 +398,7 @@ export function AdminPeople() {
 								<Button
 									variant="outline"
 									size="icon-sm"
-									onClick={() =>
-										setPage((p) => Math.min(totalPages, p + 1))
-									}
+									onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
 									disabled={currentPage === totalPages}
 									aria-label="Next page"
 								>
