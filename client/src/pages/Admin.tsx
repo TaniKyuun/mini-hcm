@@ -38,7 +38,7 @@ import { addDaysIso, dateToIso, isoToDate } from '@/utils/dateIso';
 import { formatDate, formatHours, formatTimeOnly } from '@/utils/formatTime';
 
 function today(): string {
-	return new Date().toISOString().slice(0, 10);
+	return dateToIso(new Date());
 }
 
 function formatViewedDate(iso: string): string {
