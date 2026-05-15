@@ -312,7 +312,7 @@ export function Admin() {
 								) : null}
 								{employees.map((emp) => {
 									const empSessions = sessions[emp.uid] ?? [];
-									const latest = empSessions[empSessions.length - 1];
+									const latest = empSessions[0];
 									const summary = summariesByUser.get(emp.uid);
 									const onShift = empSessions.some(
 										(s) => s.status === 'active',
