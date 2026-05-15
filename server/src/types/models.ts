@@ -68,5 +68,5 @@ export type DailySummaryDoc = {
 	undertimeMinutes: number;
 	totalHours: number;
 	sessionsCount: number;
-	updatedAt: Timestamp;
+	updatedAt: Timestamp | null;
 };

@@ -48,7 +48,7 @@ const getDaily: RequestHandler<
 						undertimeMinutes: 0,
 						totalHours: 0,
 						sessionsCount: 0,
-						updatedAt: null as never,
+						updatedAt: null,
 					}),
 		});
 	} catch (error) {
