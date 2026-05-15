@@ -1,14 +1,19 @@
 import {
 	ArrowDownIcon,
 	ArrowUpIcon,
+	ChevronLeftIcon,
+	ChevronRightIcon,
 	ClockIcon,
-	FilterIcon,
 	LogInIcon,
 	LogOutIcon,
 	PencilIcon,
 	PlusIcon,
+	XIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AddEmployeeDialog } from '@/components/AddEmployeeDialog';
+import { EditEmployeeDialog } from '@/components/EditEmployeeDialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +22,10 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import {
+	type AdminUpdateProfileBody,
+	adminUpdateEmployee,
+	type CreateEmployeeBody,
+	createEmployee,
 	fetchAdminAttendance,
 	fetchEmployees,
 	fetchWeeklyReport,
@@ -30,6 +39,7 @@ import {
 	formatMinutes,
 	formatTimeOnly,
 } from '@/utils/formatTime';
+import { formatWorkingDays } from '@/utils/workingDays';
 
 type AuditEvent = {
 	id: string;
@@ -86,6 +96,7 @@ function buildAuditLog(records: AttendanceRecord[]): AuditEvent[] {
 
 export function AdminPeople() {
 	const { user } = useAuth();
+	const navigate = useNavigate();
 	const [employees, setEmployees] = useState<UserProfile[]>([]);
 	const [weekSummaries, setWeekSummaries] = useState<DailySummary[]>([]);
 	const [search, setSearch] = useState('');
@@ -95,6 +106,12 @@ export function AdminPeople() {
 	);
 	const [auditSort, setAuditSort] = useState<'desc' | 'asc'>('desc');
 	const [error, setError] = useState<string | null>(null);
+	const [addOpen, setAddOpen] = useState(false);
+	const [addBusy, setAddBusy] = useState(false);
+	const [addError, setAddError] = useState<string | null>(null);
+	const [editOpen, setEditOpen] = useState(false);
+	const [editBusy, setEditBusy] = useState(false);
+	const [editError, setEditError] = useState<string | null>(null);
 
 	const load = useCallback(async () => {
 		if (!user) return;
@@ -113,6 +130,36 @@ export function AdminPeople() {
 	useEffect(() => {
 		void load();
 	}, [load]);
+
+	async function handleAddEmployee(body: CreateEmployeeBody) {
+		if (!user) return;
+		setAddBusy(true);
+		setAddError(null);
+		try {
+			await createEmployee(user, body);
+			setAddOpen(false);
+			await load();
+		} catch (caught) {
+			setAddError(caught instanceof Error ? caught.message : 'Unknown error');
+		} finally {
+			setAddBusy(false);
+		}
+	}
+
+	async function handleEditEmployee(body: AdminUpdateProfileBody) {
+		if (!user || !selectedUid) return;
+		setEditBusy(true);
+		setEditError(null);
+		try {
+			await adminUpdateEmployee(user, selectedUid, body);
+			setEditOpen(false);
+			await load();
+		} catch (caught) {
+			setEditError(caught instanceof Error ? caught.message : 'Unknown error');
+		} finally {
+			setEditBusy(false);
+		}
+	}
 
 	useEffect(() => {
 		if (!selectedUid && employees.length > 0) {
@@ -160,14 +207,20 @@ export function AdminPeople() {
 	const filtered = useMemo(() => {
 		const term = search.trim().toLowerCase();
 		if (!term) return decorated;
-		return decorated.filter(({ profile, deco }) => {
+		return decorated.filter(({ profile }) => {
 			return (
 				profile.name.toLowerCase().includes(term) ||
-				profile.email.toLowerCase().includes(term) ||
-				deco.role.toLowerCase().includes(term)
+				profile.email.toLowerCase().includes(term)
 			);
 		});
 	}, [decorated, search]);
+
+	const PAGE_SIZE = 10;
+	const [page, setPage] = useState(1);
+	const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+	const currentPage = Math.min(page, totalPages);
+	const pageStart = (currentPage - 1) * PAGE_SIZE;
+	const paginated = filtered.slice(pageStart, pageStart + PAGE_SIZE);
 
 	const selected = useMemo(
 		() => decorated.find((d) => d.profile.uid === selectedUid) ?? null,
@@ -212,7 +265,7 @@ export function AdminPeople() {
 					</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<Button size="sm">
+					<Button size="sm" onClick={() => setAddOpen(true)}>
 						<PlusIcon />
 						Add employee
 					</Button>
@@ -226,18 +279,30 @@ export function AdminPeople() {
 			) : null}
 
 			<div className="grid min-h-0 flex-1 gap-4 @4xl/main:grid-cols-[1.45fr_1fr]">
-				{/* LEFT — roster */}
+				{/* LEFT - roster */}
 				<Card className="gap-0 overflow-hidden p-0">
 					<div className="flex items-center gap-2 border-b px-3 py-2">
 						<Input
 							type="search"
 							value={search}
-							onChange={(e) => setSearch(e.target.value)}
+							onChange={(e) => {
+								setSearch(e.target.value);
+								setPage(1);
+							}}
 							placeholder={`Search · ${employees.length}`}
 							className="flex-1"
 						/>
-						<Button variant="outline" size="icon-sm" aria-label="Filter">
-							<FilterIcon />
+						<Button
+							variant="outline"
+							size="icon-sm"
+							aria-label="Clear search"
+							onClick={() => {
+								setSearch('');
+								setPage(1);
+							}}
+							disabled={search.length === 0}
+						>
+							<XIcon />
 						</Button>
 					</div>
 					<div className="flex items-center border-b bg-muted/30 px-3 py-2">
@@ -246,9 +311,9 @@ export function AdminPeople() {
 						</span>
 					</div>
 					<div className="grid grid-cols-[1.8fr_0.7fr_0.7fr] border-b bg-card px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-						<div>Employee · Role</div>
+						<div>Employee</div>
 						<div>Schedule</div>
-						<div className="text-right">Status</div>
+						<div className="text-right">Role</div>
 					</div>
 					<div className="flex-1 overflow-y-auto">
 						{filtered.length === 0 ? (
@@ -256,7 +321,7 @@ export function AdminPeople() {
 								No employees match.
 							</div>
 						) : (
-							filtered.map(({ profile, deco }) => {
+							paginated.map(({ profile }) => {
 								const isSel = profile.uid === selectedUid;
 								return (
 									<button
@@ -284,7 +349,7 @@ export function AdminPeople() {
 													{profile.name}
 												</div>
 												<div className="truncate text-xs text-muted-foreground">
-													{deco.role}
+													{profile.email}
 												</div>
 											</div>
 										</div>
@@ -297,8 +362,8 @@ export function AdminPeople() {
 													admin
 												</Badge>
 											) : (
-												<Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400">
-													● active
+												<Badge variant="outline" className="text-muted-foreground">
+													employee
 												</Badge>
 											)}
 										</div>
@@ -307,9 +372,43 @@ export function AdminPeople() {
 							})
 						)}
 					</div>
+					{filtered.length > PAGE_SIZE ? (
+						<div className="flex items-center justify-between border-t bg-muted/30 px-3 py-2 text-xs">
+							<span className="text-muted-foreground">
+								{filtered.length === 0
+									? '0 of 0'
+									: `${pageStart + 1}–${Math.min(pageStart + PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+							</span>
+							<div className="flex items-center gap-1">
+								<Button
+									variant="outline"
+									size="icon-sm"
+									onClick={() => setPage((p) => Math.max(1, p - 1))}
+									disabled={currentPage === 1}
+									aria-label="Previous page"
+								>
+									<ChevronLeftIcon />
+								</Button>
+								<span className="px-2 font-mono tabular-nums text-muted-foreground">
+									{currentPage} / {totalPages}
+								</span>
+								<Button
+									variant="outline"
+									size="icon-sm"
+									onClick={() =>
+										setPage((p) => Math.min(totalPages, p + 1))
+									}
+									disabled={currentPage === totalPages}
+									aria-label="Next page"
+								>
+									<ChevronRightIcon />
+								</Button>
+							</div>
+						</div>
+					) : null}
 				</Card>
 
-				{/* RIGHT — profile drawer */}
+				{/* RIGHT - profile drawer */}
 				<Card className="gap-0 overflow-hidden p-0">
 					{selected ? (
 						<>
@@ -323,24 +422,12 @@ export function AdminPeople() {
 									<div className="text-lg font-semibold tracking-tight">
 										{selected.profile.name}
 									</div>
-									<div className="text-xs text-muted-foreground">
-										{selected.deco.role}
-									</div>
 								</div>
-								{selected.profile.role === 'admin' ? (
-									<Badge className="bg-blue-500/15 text-blue-700 hover:bg-blue-500/15 dark:text-blue-400">
-										admin
-									</Badge>
-								) : (
-									<Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400">
-										● active
-									</Badge>
-								)}
 							</div>
 
 							<div className="grid grid-cols-2 gap-3 border-b px-4 py-4">
 								{[
-									{ l: 'Employee ID', v: selected.deco.employeeId },
+									{ l: 'Employee ID', v: selected.profile.uid },
 									{ l: 'Email', v: selected.profile.email },
 									{
 										l: 'Location',
@@ -348,7 +435,7 @@ export function AdminPeople() {
 									},
 									{
 										l: 'Timezone',
-										v: selected.profile.timezone || '—',
+										v: selected.profile.timezone || '-',
 									},
 									{
 										l: 'Employment',
@@ -358,7 +445,7 @@ export function AdminPeople() {
 									},
 									{
 										l: 'Shift',
-										v: `${selected.profile.schedule.start}–${selected.profile.schedule.end}`,
+										v: `${selected.profile.schedule.start}–${selected.profile.schedule.end} · ${formatWorkingDays(selected.profile.schedule)}`,
 									},
 								].map((m) => (
 									<div key={m.l}>
@@ -552,17 +639,28 @@ export function AdminPeople() {
 							</div>
 
 							<div className="mt-auto flex gap-2 border-t bg-muted/30 px-4 py-3">
-								<Button variant="outline" className="flex-1">
+								<Button
+									variant="outline"
+									className="flex-1"
+									onClick={() =>
+										navigate(
+											`/admin/attendance?uid=${encodeURIComponent(selected.profile.uid)}`,
+										)
+									}
+								>
 									<ClockIcon />
 									Open attendance
 								</Button>
-								<Button variant="outline" className="flex-1">
+								<Button
+									variant="outline"
+									className="flex-1"
+									onClick={() => {
+										setEditError(null);
+										setEditOpen(true);
+									}}
+								>
 									<PencilIcon />
 									Edit profile
-								</Button>
-								<Button variant="destructive" size="default">
-									<LogOutIcon />
-									Off-board
 								</Button>
 							</div>
 						</>
@@ -573,6 +671,29 @@ export function AdminPeople() {
 					)}
 				</Card>
 			</div>
+
+			<AddEmployeeDialog
+				open={addOpen}
+				busy={addBusy}
+				error={addError}
+				onOpenChange={(open) => {
+					setAddOpen(open);
+					if (!open) setAddError(null);
+				}}
+				onSave={(body) => void handleAddEmployee(body)}
+			/>
+
+			<EditEmployeeDialog
+				open={editOpen}
+				employee={selected?.profile ?? null}
+				busy={editBusy}
+				error={editError}
+				onOpenChange={(open) => {
+					setEditOpen(open);
+					if (!open) setEditError(null);
+				}}
+				onSave={(body) => void handleEditEmployee(body)}
+			/>
 		</div>
 	);
 }

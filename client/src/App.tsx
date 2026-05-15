@@ -2,11 +2,13 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AdminRoute } from './components/AdminRoute';
+import { Toaster } from './components/ui/sonner';
 import { useProfile } from './hooks/useProfile';
 import { AuthContext } from './lib/auth';
 import { auth } from './lib/firebase';
 import { Admin } from './pages/Admin';
 import { AdminAttendance } from './pages/AdminAttendance';
+import { AdminEditRequests } from './pages/AdminEditRequests';
 import { AdminPeople } from './pages/AdminPeople';
 import { AdminReports } from './pages/AdminReports';
 import { AppLayout } from './pages/AppLayout';
@@ -44,11 +46,17 @@ function App() {
 	}
 
 	if (!user) {
-		return <SignIn />;
+		return (
+			<>
+				<SignIn />
+				<Toaster />
+			</>
+		);
 	}
 
 	return (
 		<AuthContext.Provider value={{ user, authReady }}>
+			<Toaster />
 			<BrowserRouter>
 				<Routes>
 					<Route element={<AppLayout />}>
@@ -63,6 +71,7 @@ function App() {
 								<Route path="today" element={<Dashboard />} />
 								<Route path="employees" element={<AdminPeople />} />
 								<Route path="attendance" element={<AdminAttendance />} />
+								<Route path="edit-requests" element={<AdminEditRequests />} />
 								<Route path="reports" element={<AdminReports />} />
 							</Route>
 							<Route path="employees" element={<AdminPeople />} />

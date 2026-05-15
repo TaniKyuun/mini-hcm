@@ -7,6 +7,7 @@ import {
 	PlusIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AddEmployeeDialog } from '@/components/AddEmployeeDialog';
 import { EditPunchModal } from '@/components/EditPunchModal';
 import { KpiCard } from '@/components/KpiCard';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,7 +30,9 @@ import {
 import { useAuth } from '@/lib/auth';
 import {
 	adminUpdateAttendance,
-	fetchAdminAttendance,
+	type CreateEmployeeBody,
+	createEmployee,
+	fetchAdminAttendanceByDate,
 	fetchDailyReport,
 	fetchEmployees,
 } from '@/services/adminService';
@@ -98,6 +101,9 @@ export function Admin() {
 	const [editing, setEditing] = useState<AttendanceRecord | null>(null);
 	const [editBusy, setEditBusy] = useState(false);
 	const [editError, setEditError] = useState<string | null>(null);
+	const [addOpen, setAddOpen] = useState(false);
+	const [addBusy, setAddBusy] = useState(false);
+	const [addError, setAddError] = useState<string | null>(null);
 	const reportRequestId = useRef(0);
 
 	const loadReport = useCallback(async () => {
@@ -111,28 +117,30 @@ export function Admin() {
 		if (!isLatestRequest()) return;
 		setError(null);
 		try {
-			const [empResult, reportResult] = await Promise.all([
+			const [empResult, reportResult, byDateResult] = await Promise.all([
 				fetchEmployees(user),
 				fetchDailyReport(user, date),
+				fetchAdminAttendanceByDate(user, date),
 			]);
 			if (!isLatestRequest()) return;
 			setEmployees(empResult.employees);
 			if (!isLatestRequest()) return;
 			setSummaries(reportResult.summaries);
 
+			// Group the single bulk response by userId, in newest-first order.
 			const sessionsByUser: Record<string, AttendanceRecord[]> = {};
-			await Promise.all(
-				empResult.employees.map(async (emp) => {
-					try {
-						const r = await fetchAdminAttendance(user, emp.uid, date, date);
-						if (!isLatestRequest()) return;
-						sessionsByUser[emp.uid] = r.sessions;
-					} catch {
-						if (!isLatestRequest()) return;
-						sessionsByUser[emp.uid] = [];
-					}
-				}),
-			);
+			for (const emp of empResult.employees) {
+				sessionsByUser[emp.uid] = [];
+			}
+			for (const session of byDateResult.sessions) {
+				const list = sessionsByUser[session.userId];
+				if (list) list.push(session);
+			}
+			for (const uid of Object.keys(sessionsByUser)) {
+				sessionsByUser[uid].sort(
+					(a, b) => new Date(b.timeIn).getTime() - new Date(a.timeIn).getTime(),
+				);
+			}
 			if (!isLatestRequest()) return;
 			setSessions(sessionsByUser);
 		} catch (caught) {
@@ -152,6 +160,21 @@ export function Admin() {
 	function openEdit(record: AttendanceRecord) {
 		setEditing(record);
 		setEditError(null);
+	}
+
+	async function handleAddEmployee(body: CreateEmployeeBody) {
+		if (!user) return;
+		setAddBusy(true);
+		setAddError(null);
+		try {
+			await createEmployee(user, body);
+			setAddOpen(false);
+			await loadReport();
+		} catch (caught) {
+			setAddError(caught instanceof Error ? caught.message : 'Unknown error');
+		} finally {
+			setAddBusy(false);
+		}
 	}
 
 	async function saveEdit(body: {
@@ -244,7 +267,7 @@ export function Admin() {
 					>
 						Today
 					</Button>
-					<Button size="sm">
+					<Button size="sm" onClick={() => setAddOpen(true)}>
 						<PlusIcon />
 						Add employee
 					</Button>
@@ -335,12 +358,12 @@ export function Admin() {
 											<TableCell className="font-mono tabular-nums">
 												{latest
 													? formatTimeOnly(latest.timeIn, emp.timezone)
-													: '—'}
+													: '-'}
 											</TableCell>
 											<TableCell className="font-mono tabular-nums">
 												{latest?.timeOut
 													? formatTimeOnly(latest.timeOut, emp.timezone)
-													: '—'}
+													: '-'}
 											</TableCell>
 											<TableCell className="text-right font-mono tabular-nums">
 												{formatHours(summary?.totalHours ?? 0)}h
@@ -403,6 +426,17 @@ export function Admin() {
 				error={editError}
 				onOpenChange={(open) => !open && setEditing(null)}
 				onSave={(body) => void saveEdit(body)}
+			/>
+
+			<AddEmployeeDialog
+				open={addOpen}
+				busy={addBusy}
+				error={addError}
+				onOpenChange={(open) => {
+					setAddOpen(open);
+					if (!open) setAddError(null);
+				}}
+				onSave={(body) => void handleAddEmployee(body)}
 			/>
 		</div>
 	);

@@ -7,6 +7,8 @@ export type EmploymentType = 'Full-time' | 'Part-time' | 'Contractual';
 export type UserSchedule = {
 	start: string;
 	end: string;
+	/** Day-of-week indices the employee works; 0=Sun..6=Sat. Defaults to Mon–Fri when absent. */
+	workingDays?: number[];
 };
 
 export type UserProfile = {
@@ -67,6 +69,10 @@ export type DailySummary = {
 	undertimeMinutes: number;
 	totalHours: number;
 	sessionsCount: number;
+	/** ISO timestamp of the earliest completed-session timeIn for the day. */
+	firstTimeIn: string | null;
+	/** ISO timestamp of the latest completed-session timeOut for the day. */
+	lastTimeOut: string | null;
 	updatedAt: string | null;
 };
 
@@ -101,6 +107,11 @@ export type AdminAttendanceResponse = {
 	sessions: AttendanceRecord[];
 };
 
+export type AdminAttendanceByDateResponse = {
+	date: string;
+	sessions: AttendanceRecord[];
+};
+
 export type DailyReportResponse = {
 	date: string;
 	employees: UserProfile[];
@@ -113,4 +124,55 @@ export type WeeklyReportResponse = {
 	dates: string[];
 	employees: UserProfile[];
 	summaries: DailySummary[];
+};
+
+export type NotificationType =
+	| 'punch_edited'
+	| 'edit_request_created'
+	| 'edit_request_approved'
+	| 'edit_request_rejected';
+
+export type NotificationMetadata = {
+	attendanceId?: string;
+	date?: string;
+};
+
+export type Notification = {
+	id: string;
+	recipientUid: string;
+	actorUid: string;
+	type: NotificationType;
+	read: boolean;
+	title: string;
+	body: string;
+	metadata?: NotificationMetadata;
+	createdAt: string | null;
+};
+
+export type NotificationsResponse = {
+	notifications: Notification[];
+	unreadCount: number;
+};
+
+export type EditRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export type EditRequest = {
+	id: string;
+	attendanceId: string;
+	requesterUid: string;
+	date: string;
+	originalTimeIn: string;
+	originalTimeOut: string | null;
+	requestedTimeIn: string | null;
+	requestedTimeOut: string | null;
+	reason: string;
+	status: EditRequestStatus;
+	createdAt: string | null;
+	resolvedAt: string | null;
+	resolvedBy: string | null;
+	adminNote: string | null;
+};
+
+export type EditRequestsResponse = {
+	editRequests: EditRequest[];
 };

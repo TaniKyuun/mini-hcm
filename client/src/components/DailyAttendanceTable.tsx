@@ -1,4 +1,4 @@
-import { ArrowRightIcon, InfoIcon, PencilIcon } from 'lucide-react';
+import { ArrowRightIcon, InfoIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +16,7 @@ import {
 	TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { AttendanceRecord } from '@/types/api';
+import type { DailySummary } from '@/types/api';
 import {
 	formatDate,
 	formatHoursAndMinutes,
@@ -24,30 +24,13 @@ import {
 	formatTimeOnly,
 } from '@/utils/formatTime';
 
-type AttendanceTableProps = {
-	records: AttendanceRecord[];
+type DailyAttendanceTableProps = {
+	days: DailySummary[];
 	timezone?: string;
 	emptyMessage?: string;
-	onEdit?: (record: AttendanceRecord) => void;
-	onViewDetails?: (record: AttendanceRecord) => void;
+	onViewDetails?: (day: DailySummary) => void;
 };
 
-function StatusBadge({ status }: { status: AttendanceRecord['status'] }) {
-	if (status === 'active') {
-		return (
-			<Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400">
-				● on shift
-			</Badge>
-		);
-	}
-	return <Badge variant="secondary">completed</Badge>;
-}
-
-/**
- * Column header with a tooltip explaining the metric - `Regular`, `OT`, `ND`,
- * and `Late` are jargon to anyone outside payroll. The info icon stays
- * unobtrusive and the tooltip exposes the full definition on hover.
- */
 function MetricHead({
 	label,
 	hint,
@@ -93,9 +76,7 @@ function HoursCell({
 				'text-right font-mono tabular-nums',
 				isZero && 'text-muted-foreground/50',
 				!isZero && tone === 'primary' && 'text-primary',
-				!isZero &&
-					tone === 'night' &&
-					'text-indigo-600 dark:text-indigo-400',
+				!isZero && tone === 'night' && 'text-indigo-600 dark:text-indigo-400',
 				!isZero && tone === 'warn' && 'text-amber-600 dark:text-amber-400',
 			)}
 		>
@@ -125,16 +106,39 @@ function MinutesCell({
 	);
 }
 
-export function AttendanceTable({
-	records,
-	timezone,
-	emptyMessage = 'No attendance records.',
-	onEdit,
-	onViewDetails,
-}: AttendanceTableProps) {
-	const hasAction = Boolean(onEdit || onViewDetails);
+function StatusCell({ sessionsCount }: { sessionsCount: number }) {
+	if (sessionsCount === 0) {
+		return (
+			<TableCell>
+				<Badge variant="outline" className="text-muted-foreground">
+					no punches
+				</Badge>
+			</TableCell>
+		);
+	}
+	if (sessionsCount > 1) {
+		return (
+			<TableCell>
+				<Badge variant="secondary">{sessionsCount} sessions · completed</Badge>
+			</TableCell>
+		);
+	}
+	return (
+		<TableCell>
+			<Badge variant="secondary">completed</Badge>
+		</TableCell>
+	);
+}
 
-	if (records.length === 0) {
+export function DailyAttendanceTable({
+	days,
+	timezone,
+	emptyMessage = 'No activity in this range.',
+	onViewDetails,
+}: DailyAttendanceTableProps) {
+	const hasAction = Boolean(onViewDetails);
+
+	if (days.length === 0) {
 		return (
 			<div className="w-full">
 				<div className="rounded-sm border bg-card px-4 py-12 text-center text-sm text-muted-foreground">
@@ -171,67 +175,69 @@ export function AttendanceTable({
 							/>
 							<MetricHead
 								label="Total"
-								hint="Regular + Overtime + Night differential."
+								hint="Regular + Overtime + Night differential, summed across the day's sessions."
 							/>
 							<TableHead>Status</TableHead>
 							{hasAction ? <TableHead className="text-right" /> : null}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{records.map((record) => {
-							const reg = record.computed?.regularHours ?? 0;
-							const ot = record.computed?.overtimeHours ?? 0;
-							const nd = record.computed?.nightDifferentialHours ?? 0;
-							const late = record.computed?.lateMinutes ?? 0;
-							const total = reg + ot + nd;
+						{days.map((day) => {
+							const isEmpty = day.sessionsCount === 0;
 							return (
-								<TableRow key={record.id}>
+								<TableRow key={day.date}>
 									<TableCell className="font-medium">
-										{formatDate(record.date)}
+										{formatDate(day.date)}
 									</TableCell>
-									<TableCell className="font-mono tabular-nums">
-										{formatTimeOnly(record.timeIn, timezone)}
+									<TableCell
+										className={cn(
+											'font-mono tabular-nums',
+											!day.firstTimeIn && 'text-muted-foreground/50',
+										)}
+									>
+										{day.firstTimeIn
+											? formatTimeOnly(day.firstTimeIn, timezone)
+											: '-'}
 									</TableCell>
-									<TableCell className="font-mono tabular-nums">
-										{formatTimeOnly(record.timeOut, timezone)}
+									<TableCell
+										className={cn(
+											'font-mono tabular-nums',
+											!day.lastTimeOut && 'text-muted-foreground/50',
+										)}
+									>
+										{day.lastTimeOut
+											? formatTimeOnly(day.lastTimeOut, timezone)
+											: '-'}
 									</TableCell>
-									<HoursCell hours={reg} />
-									<HoursCell hours={ot} tone="primary" />
-									<HoursCell hours={nd} tone="night" />
-									<MinutesCell minutes={late} tone="warn" />
+									<HoursCell hours={day.regularHours} />
+									<HoursCell hours={day.overtimeHours} tone="primary" />
+									<HoursCell
+										hours={day.nightDifferentialHours}
+										tone="night"
+									/>
+									<MinutesCell minutes={day.lateMinutes} tone="warn" />
 									<TableCell
 										className={cn(
 											'text-right font-mono font-semibold tabular-nums',
-											total <= 0 && 'text-muted-foreground/50',
+											day.totalHours <= 0 && 'text-muted-foreground/50',
 										)}
 									>
-										{total <= 0 ? '-' : formatHoursAndMinutes(total)}
+										{day.totalHours <= 0
+											? '-'
+											: formatHoursAndMinutes(day.totalHours)}
 									</TableCell>
-									<TableCell>
-										<StatusBadge status={record.status} />
-									</TableCell>
-									{hasAction ? (
+									<StatusCell sessionsCount={day.sessionsCount} />
+									{hasAction && onViewDetails ? (
 										<TableCell className="text-right">
-											{onEdit ? (
-												<Button
-													variant="outline"
-													size="xs"
-													onClick={() => onEdit(record)}
-												>
-													<PencilIcon />
-													Edit
-												</Button>
-											) : null}
-											{onViewDetails ? (
-												<Button
-													variant="outline"
-													size="xs"
-													onClick={() => onViewDetails(record)}
-												>
-													View details
-													<ArrowRightIcon />
-												</Button>
-											) : null}
+											<Button
+												variant="outline"
+												size="xs"
+												disabled={isEmpty}
+												onClick={() => onViewDetails(day)}
+											>
+												View details
+												<ArrowRightIcon />
+											</Button>
 										</TableCell>
 									) : null}
 								</TableRow>

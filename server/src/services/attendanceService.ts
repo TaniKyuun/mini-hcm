@@ -11,7 +11,7 @@ import type {
 import { computeHours } from './computeService';
 import { notifyEmployeeOfEdit } from './notificationService';
 import { writeDailySummary } from './summaryService';
-import { getUserProfile } from './userService';
+import { getUserProfile, ValidationError } from './userService';
 
 export type AttendanceWithId = AttendanceDoc & { id: string };
 
@@ -52,6 +52,7 @@ export async function punchIn(profile: UserProfile): Promise<AttendanceWithId> {
 	const localDate = formatInTimeZone(now, profile.timezone, 'yyyy-MM-dd');
 	const docId = `${profile.uid}_${localDate}_${now.getTime()}`;
 	const newRef = db.collection(ATTENDANCE_COLLECTION).doc(docId);
+	const timeIn = Timestamp.fromDate(now);
 
 	await db.runTransaction(async (tx) => {
 		const activeSnap = await tx.get(
@@ -64,21 +65,33 @@ export async function punchIn(profile: UserProfile): Promise<AttendanceWithId> {
 		if (!activeSnap.empty) {
 			throw new AttendanceConflictError('User already has an active session.');
 		}
-		const payload: AttendanceDoc = {
+		tx.set(newRef, {
 			userId: profile.uid,
 			date: localDate,
-			timeIn: Timestamp.fromDate(now),
+			timeIn,
 			timeOut: null,
 			status: 'active',
 			computed: null,
-			createdAt: FieldValue.serverTimestamp() as unknown as Timestamp,
-			updatedAt: FieldValue.serverTimestamp() as unknown as Timestamp,
-		};
-		tx.set(newRef, payload);
+			createdAt: FieldValue.serverTimestamp(),
+			updatedAt: FieldValue.serverTimestamp(),
+		});
 	});
 
-	const created = await newRef.get();
-	return { id: docId, ...(created.data() as AttendanceDoc) };
+	// Synthesize the return locally — avoids an extra read after the write.
+	// serverTimestamp resolves on the server; clients only see this synthesized
+	// Timestamp.now() for the createdAt/updatedAt of the response, which is
+	// within microseconds of the persisted value.
+	return {
+		id: docId,
+		userId: profile.uid,
+		date: localDate,
+		timeIn,
+		timeOut: null,
+		status: 'active',
+		computed: null,
+		createdAt: Timestamp.now(),
+		updatedAt: Timestamp.now(),
+	};
 }
 
 export async function punchOut(
@@ -99,8 +112,9 @@ export async function punchOut(
 	});
 
 	const ref = db.collection(ATTENDANCE_COLLECTION).doc(active.id);
+	const timeOutTs = Timestamp.fromDate(timeOut);
 	await ref.update({
-		timeOut: Timestamp.fromDate(timeOut),
+		timeOut: timeOutTs,
 		status: 'completed',
 		computed,
 		updatedAt: FieldValue.serverTimestamp(),
@@ -108,8 +122,15 @@ export async function punchOut(
 
 	await writeDailySummary(db, profile.uid, active.date);
 
-	const updated = await ref.get();
-	return { id: active.id, ...(updated.data() as AttendanceDoc) };
+	// Synthesize the return locally — avoids the extra read after update.
+	return {
+		...active,
+		id: active.id,
+		timeOut: timeOutTs,
+		status: 'completed',
+		computed,
+		updatedAt: Timestamp.now(),
+	};
 }
 
 export async function getHistory(
@@ -127,6 +148,28 @@ export async function getHistory(
 		.orderBy('timeIn', 'desc')
 		.get();
 
+	return snapshot.docs.map((doc) => ({
+		id: doc.id,
+		...(doc.data() as AttendanceDoc),
+	}));
+}
+
+/**
+ * Single Firestore query that returns every attendance record for `date`
+ * across all users. Replaces the previous "fetch per employee in a
+ * Promise.all" pattern in Admin.tsx and AdminAttendance.tsx, which scaled
+ * O(N employees) reads per page load.
+ *
+ * Uses the auto-created single-field index on `date` (no composite needed).
+ */
+export async function listAttendanceOnDate(
+	date: string,
+): Promise<AttendanceWithId[]> {
+	const db = getFirestoreDb();
+	const snapshot = await db
+		.collection(ATTENDANCE_COLLECTION)
+		.where('date', '==', date)
+		.get();
 	return snapshot.docs.map((doc) => ({
 		id: doc.id,
 		...(doc.data() as AttendanceDoc),
@@ -173,7 +216,7 @@ export async function adminUpdateAttendance(
 	let status: AttendanceDoc['status'] = 'active';
 	if (nextTimeOut) {
 		if (nextTimeOut <= nextTimeIn) {
-			throw new Error('timeOut must be after timeIn.');
+			throw new ValidationError('Clock-out must be after clock-in.', 'timeOut');
 		}
 		computed = computeHours({
 			timeIn: nextTimeIn,
@@ -201,9 +244,11 @@ export async function adminUpdateAttendance(
 		},
 	};
 
+	const nextTimeInTs = Timestamp.fromDate(nextTimeIn);
+	const nextTimeOutTs = nextTimeOut ? Timestamp.fromDate(nextTimeOut) : null;
 	await ref.update({
-		timeIn: Timestamp.fromDate(nextTimeIn),
-		timeOut: nextTimeOut ? Timestamp.fromDate(nextTimeOut) : null,
+		timeIn: nextTimeInTs,
+		timeOut: nextTimeOutTs,
 		status,
 		computed,
 		date: nextDate,
@@ -217,11 +262,26 @@ export async function adminUpdateAttendance(
 	}
 
 	if (input.notify) {
-		notifyEmployeeOfEdit(existing.userId, reason);
+		await notifyEmployeeOfEdit(existing.userId, actingUid, reason, {
+			attendanceId: id,
+			date: nextDate,
+		});
 	}
 
-	const updated = await ref.get();
-	return { id, ...(updated.data() as AttendanceDoc) };
+	// Synthesize the return locally — avoids the extra read after update.
+	// `arrayUnion(edit)` appends `edit` to the existing array; we replicate that
+	// here without re-reading.
+	return {
+		...existing,
+		id,
+		timeIn: nextTimeInTs,
+		timeOut: nextTimeOutTs,
+		status,
+		computed,
+		date: nextDate,
+		edits: [...(existing.edits ?? []), edit],
+		updatedAt: Timestamp.now(),
+	};
 }
 
 function normalizeReason(value: string | undefined): string | null {
@@ -243,7 +303,7 @@ function parseDateOrThrow(value: string | undefined, fallback: Date): Date {
 	if (value === undefined) return fallback;
 	const parsed = new Date(value);
 	if (Number.isNaN(parsed.getTime())) {
-		throw new Error(`Invalid date value: ${value}`);
+		throw new ValidationError(`Invalid clock-in date/time: ${value}`, 'timeIn');
 	}
 	return parsed;
 }
@@ -256,7 +316,10 @@ function parseTimeOutOrThrow(
 	if (value === null) return null;
 	const parsed = new Date(value);
 	if (Number.isNaN(parsed.getTime())) {
-		throw new Error(`Invalid timeOut value: ${value}`);
+		throw new ValidationError(
+			`Invalid clock-out date/time: ${value}`,
+			'timeOut',
+		);
 	}
 	return parsed;
 }

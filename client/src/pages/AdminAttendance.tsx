@@ -1,14 +1,13 @@
 import {
-	BellIcon,
 	CalendarIcon,
-	CheckIcon,
 	ChevronDownIcon,
 	ChevronLeftIcon,
 	ChevronRightIcon,
-	FilterIcon,
 	PencilIcon,
+	XIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { EditPunchModal } from '@/components/EditPunchModal';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +24,7 @@ import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 import {
 	adminUpdateAttendance,
-	fetchAdminAttendance,
+	fetchAdminAttendanceByDate,
 	fetchEmployees,
 } from '@/services/adminService';
 import type { AttendanceRecord, UserProfile } from '@/types/api';
@@ -36,15 +35,29 @@ import {
 	formatMinutes,
 	formatTimeOnly,
 } from '@/utils/formatTime';
+import { isWorkingDay } from '@/utils/workingDays';
 
-type Filter = 'All' | 'On shift' | 'Late' | 'Absent' | 'Completed';
-const FILTERS: Filter[] = ['All', 'On shift', 'Late', 'Absent', 'Completed'];
+type Filter =
+	| 'All'
+	| 'On shift'
+	| 'Late'
+	| 'Absent'
+	| 'Completed'
+	| 'Rest day';
+const FILTERS: Filter[] = [
+	'All',
+	'On shift',
+	'Late',
+	'Absent',
+	'Completed',
+	'Rest day',
+];
 
 const DAY_START_HOUR = 6;
 const DAY_END_HOUR = 22;
 
 function todayIso(): string {
-	return new Date().toISOString().slice(0, 10);
+	return dateToIso(new Date());
 }
 
 function formatViewedDate(iso: string): string {
@@ -76,10 +89,13 @@ function pctOfDay(minutes: number): number {
 	);
 }
 
-type RowState = 'on-shift' | 'late' | 'completed' | 'absent';
+type RowState = 'on-shift' | 'late' | 'completed' | 'absent' | 'rest-day';
 
-function classifyRow(session: AttendanceRecord | null): RowState {
-	if (!session) return 'absent';
+function classifyRow(
+	session: AttendanceRecord | null,
+	isRestDay: boolean,
+): RowState {
+	if (!session) return isRestDay ? 'rest-day' : 'absent';
 	if (session.status === 'active') {
 		if ((session.computed?.lateMinutes ?? 0) > 0) return 'late';
 		return 'on-shift';
@@ -104,18 +120,21 @@ function StateBadge({ state }: { state: RowState }) {
 		);
 	}
 	if (state === 'absent') return <Badge variant="destructive">absent</Badge>;
+	if (state === 'rest-day') return <Badge variant="outline">rest day</Badge>;
 	return <Badge variant="secondary">completed</Badge>;
 }
 
 export function AdminAttendance() {
 	const { user } = useAuth();
+	const [searchParams] = useSearchParams();
+	const requestedUid = searchParams.get('uid');
 	const [employees, setEmployees] = useState<UserProfile[]>([]);
 	const [sessions, setSessions] = useState<
 		Record<string, AttendanceRecord | null>
 	>({});
 	const [search, setSearch] = useState('');
 	const [filter, setFilter] = useState<Filter>('All');
-	const [selectedUid, setSelectedUid] = useState<string | null>(null);
+	const [selectedUid, setSelectedUid] = useState<string | null>(requestedUid);
 	const [error, setError] = useState<string | null>(null);
 	const [date, setDate] = useState(todayIso());
 	const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -128,19 +147,30 @@ export function AdminAttendance() {
 	const load = useCallback(async () => {
 		if (!user) return;
 		try {
-			const emp = await fetchEmployees(user);
+			// Single bulk query for all employees' sessions on this date instead of
+			// one fetch per employee. The map below picks the most recent session
+			// per user (latest timeIn) which is what the roster row shows.
+			const [emp, byDate] = await Promise.all([
+				fetchEmployees(user),
+				fetchAdminAttendanceByDate(user, date),
+			]);
 			setEmployees(emp.employees);
+
+			const latestByUid = new Map<string, AttendanceRecord>();
+			for (const session of byDate.sessions) {
+				const existing = latestByUid.get(session.userId);
+				if (
+					!existing ||
+					new Date(session.timeIn).getTime() >
+						new Date(existing.timeIn).getTime()
+				) {
+					latestByUid.set(session.userId, session);
+				}
+			}
 			const map: Record<string, AttendanceRecord | null> = {};
-			await Promise.all(
-				emp.employees.map(async (e) => {
-					try {
-						const r = await fetchAdminAttendance(user, e.uid, date, date);
-						map[e.uid] = r.sessions[r.sessions.length - 1] ?? null;
-					} catch {
-						map[e.uid] = null;
-					}
-				}),
-			);
+			for (const e of emp.employees) {
+				map[e.uid] = latestByUid.get(e.uid) ?? null;
+			}
 			setSessions(map);
 			if (!selectedUid && emp.employees.length > 0) {
 				setSelectedUid(emp.employees[0].uid);
@@ -186,13 +216,17 @@ export function AdminAttendance() {
 
 	const decorated = useMemo(
 		() =>
-			employees.map((emp) => ({
-				profile: emp,
-				deco: decorateEmployee(emp),
-				session: sessions[emp.uid] ?? null,
-				state: classifyRow(sessions[emp.uid] ?? null),
-			})),
-		[employees, sessions],
+			employees.map((emp) => {
+				const session = sessions[emp.uid] ?? null;
+				const restDay = !isWorkingDay(emp.schedule, date);
+				return {
+					profile: emp,
+					deco: decorateEmployee(emp),
+					session,
+					state: classifyRow(session, restDay),
+				};
+			}),
+		[employees, sessions, date],
 	);
 
 	const filtered = useMemo(() => {
@@ -202,21 +236,29 @@ export function AdminAttendance() {
 			if (filter === 'Late' && row.state !== 'late') return false;
 			if (filter === 'Absent' && row.state !== 'absent') return false;
 			if (filter === 'Completed' && row.state !== 'completed') return false;
+			if (filter === 'Rest day' && row.state !== 'rest-day') return false;
 			if (!term) return true;
 			return (
 				row.profile.name.toLowerCase().includes(term) ||
-				row.deco.dept.toLowerCase().includes(term)
+				row.profile.email.toLowerCase().includes(term)
 			);
 		});
 	}, [decorated, filter, search]);
 
 	const counts = useMemo(() => {
-		const c = { onShift: 0, late: 0, absent: 0, completed: 0 };
+		const c = {
+			onShift: 0,
+			late: 0,
+			absent: 0,
+			completed: 0,
+			restDay: 0,
+		};
 		for (const row of decorated) {
 			if (row.state === 'on-shift') c.onShift += 1;
 			else if (row.state === 'late') c.late += 1;
 			else if (row.state === 'absent') c.absent += 1;
 			else if (row.state === 'completed') c.completed += 1;
+			else if (row.state === 'rest-day') c.restDay += 1;
 		}
 		return c;
 	}, [decorated]);
@@ -273,6 +315,9 @@ export function AdminAttendance() {
 						{counts.late} late
 					</Badge>
 					<Badge variant="destructive">{counts.absent} absent</Badge>
+					{counts.restDay > 0 ? (
+						<Badge variant="outline">{counts.restDay} rest day</Badge>
+					) : null}
 					<div className="ml-1 flex items-center gap-1">
 						<Button
 							variant="ghost"
@@ -338,7 +383,7 @@ export function AdminAttendance() {
 			) : null}
 
 			<div className="grid min-h-0 flex-1 gap-4 @4xl/main:grid-cols-[1.1fr_1fr]">
-				{/* LEFT — list */}
+				{/* LEFT - list */}
 				<Card className="gap-0 overflow-hidden p-0">
 					<div className="flex items-center gap-2 border-b px-3 py-2">
 						<Input
@@ -348,8 +393,14 @@ export function AdminAttendance() {
 							placeholder={`Search · ${employees.length} people`}
 							className="flex-1"
 						/>
-						<Button variant="outline" size="icon-sm" aria-label="Filter">
-							<FilterIcon />
+						<Button
+							variant="outline"
+							size="icon-sm"
+							aria-label="Clear search"
+							onClick={() => setSearch('')}
+							disabled={search.length === 0}
+						>
+							<XIcon />
 						</Button>
 					</div>
 					<div className="flex items-center gap-1.5 border-b bg-muted/30 px-3 py-2">
@@ -375,7 +426,7 @@ export function AdminAttendance() {
 								No employees match.
 							</div>
 						) : (
-							filtered.map(({ profile, deco, session, state }) => {
+							filtered.map(({ profile, session, state }) => {
 								const isSel = profile.uid === selectedUid;
 								return (
 									<button
@@ -402,15 +453,14 @@ export function AdminAttendance() {
 												{profile.name}
 											</div>
 											<div className="truncate text-xs text-muted-foreground">
-												{deco.dept} · {profile.schedule.start}–
-												{profile.schedule.end}
+												{profile.schedule.start}–{profile.schedule.end}
 											</div>
 										</div>
 										<div className="text-right">
 											<div className="font-mono text-xs tabular-nums text-muted-foreground">
 												{session
 													? `${formatTimeOnly(session.timeIn, profile.timezone)} → ${session.timeOut ? formatTimeOnly(session.timeOut, profile.timezone) : 'live'}`
-													: '— → —'}
+													: '- → -'}
 											</div>
 											<div className="mt-1">
 												<StateBadge state={state} />
@@ -423,7 +473,7 @@ export function AdminAttendance() {
 					</div>
 				</Card>
 
-				{/* RIGHT — detail */}
+				{/* RIGHT - detail */}
 				<Card className="gap-0 overflow-hidden p-0">
 					{selected ? (
 						<>
@@ -438,11 +488,10 @@ export function AdminAttendance() {
 										{selected.profile.name}
 									</div>
 									<div className="text-xs text-muted-foreground">
-										{selected.deco.dept} · Shift{' '}
-										{selected.profile.schedule.start}–
+										Shift {selected.profile.schedule.start}–
 										{selected.profile.schedule.end} ·{' '}
 										{selected.profile.location ?? selected.deco.location} · ID{' '}
-										{selected.deco.employeeId}
+										{selected.profile.uid}
 									</div>
 								</div>
 								<StateBadge state={selected.state} />
@@ -645,16 +694,6 @@ export function AdminAttendance() {
 								))}
 							</div>
 
-							<div className="flex gap-2 bg-muted/30 px-4 py-3">
-								<Button variant="outline" className="flex-1">
-									<CheckIcon />
-									Approve OT
-								</Button>
-								<Button className="flex-1">
-									<BellIcon />
-									Notify
-								</Button>
-							</div>
 						</>
 					) : (
 						<div className="flex h-full items-center justify-center px-4 py-12 text-sm text-muted-foreground">

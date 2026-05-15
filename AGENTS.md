@@ -1,4 +1,4 @@
-# mini-hcm — Agent Guide
+# mini-hcm - Agent Guide
 
 A lightweight Human Capital Management (HCM) time-tracking application built as a monorepo with a Vite + React frontend and an Express.js backend.
 
@@ -78,7 +78,7 @@ cd client && bun dev
 
 In development, Vite proxies `/api/*` to `http://localhost:3000`. There is **no CORS issue in development** because all browser requests hit the Vite dev server, which forwards them.
 
-In production, Express serves the built client from `dist/` and handles API routes directly — no proxy needed.
+In production, Express serves the built client from `dist/` and handles API routes directly - no proxy needed.
 
 ---
 
@@ -103,7 +103,7 @@ Key Biome settings:
 - Quotes: **single** for JS/TS
 - Import organization: **auto-sorted**
 
-The client also has ESLint (`client/eslint.config.js`) for React-specific rules (hooks, fast-refresh). Biome and ESLint rules do not conflict — ESLint covers React plugin rules that Biome does not have.
+The client also has ESLint (`client/eslint.config.js`) for React-specific rules (hooks, fast-refresh). Biome and ESLint rules do not conflict - ESLint covers React plugin rules that Biome does not have.
 
 ---
 
@@ -118,7 +118,7 @@ Both workspaces use **strict TypeScript**. Do not use `any` unless absolutely un
 
 ## Firebase
 
-The server has Firebase Admin SDK installed. Credentials are loaded via environment variables — never hard-code service account keys.
+The server has Firebase Admin SDK installed. Credentials are loaded via environment variables - never hard-code service account keys.
 
 Create `server/.env` (not committed) with:
 
@@ -138,14 +138,14 @@ Add route handlers in `server/src/index.ts` (or extract to a `server/src/routes/
 
 ### New React page / component
 
-Place components under `client/src/components/` and pages under `client/src/pages/`. Import styles via Tailwind utility classes — avoid custom CSS unless Tailwind cannot cover the case.
+Place components under `client/src/components/` and pages under `client/src/pages/`. Import styles via Tailwind utility classes - avoid custom CSS unless Tailwind cannot cover the case.
 
 ---
 
 ## Common Pitfalls
 
 - **Always use `bun`**, not `npm` or `yarn`. The lockfile is `bun.lock`.
-- Run `bun run check` (Biome) before opening a PR — CI will fail on lint/format errors.
+- Run `bun run check` (Biome) before opening a PR - CI will fail on lint/format errors.
 - The Vite proxy only works in **development**. Never rely on it in production logic.
 - Firebase Admin SDK is server-side only. Do not import it in the client.
-- React 19 uses the new **React Compiler** (Babel preset). Avoid manual `useMemo`/`useCallback` optimization — the compiler handles it.
+- React 19 uses the new **React Compiler** (Babel preset). Avoid manual `useMemo`/`useCallback` optimization - the compiler handles it.

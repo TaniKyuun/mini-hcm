@@ -2,7 +2,9 @@ import type { Timestamp } from 'firebase-admin/firestore';
 import type {
 	AttendanceDoc,
 	AttendanceEdit,
+	AttendanceEditRequestDoc,
 	DailySummaryDoc,
+	NotificationDoc,
 	UserProfile,
 } from '../types/models';
 
@@ -69,7 +71,12 @@ export function serializeAttendance(
 	};
 }
 
-export type SerializedDailySummary = Omit<DailySummaryDoc, 'updatedAt'> & {
+export type SerializedDailySummary = Omit<
+	DailySummaryDoc,
+	'firstTimeIn' | 'lastTimeOut' | 'updatedAt'
+> & {
+	firstTimeIn: string | null;
+	lastTimeOut: string | null;
 	updatedAt: string | null;
 };
 
@@ -78,6 +85,45 @@ export function serializeDailySummary(
 ): SerializedDailySummary {
 	return {
 		...doc,
+		firstTimeIn: tsToIso(doc.firstTimeIn),
+		lastTimeOut: tsToIso(doc.lastTimeOut),
 		updatedAt: tsToIso(doc.updatedAt),
+	};
+}
+
+export type SerializedNotification = Omit<NotificationDoc, 'createdAt'> & {
+	id: string;
+	createdAt: string | null;
+};
+
+export function serializeNotification(
+	id: string,
+	doc: NotificationDoc,
+): SerializedNotification {
+	return {
+		id,
+		...doc,
+		createdAt: tsToIso(doc.createdAt),
+	};
+}
+
+export type SerializedEditRequest = Omit<
+	AttendanceEditRequestDoc,
+	'createdAt' | 'resolvedAt'
+> & {
+	id: string;
+	createdAt: string | null;
+	resolvedAt: string | null;
+};
+
+export function serializeEditRequest(
+	id: string,
+	doc: AttendanceEditRequestDoc,
+): SerializedEditRequest {
+	return {
+		id,
+		...doc,
+		createdAt: tsToIso(doc.createdAt),
+		resolvedAt: tsToIso(doc.resolvedAt),
 	};
 }

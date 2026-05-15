@@ -58,7 +58,7 @@ function sumTotals(rows: DailySummary[]): Totals {
 }
 
 function todayIso(): string {
-	return new Date().toISOString().slice(0, 10);
+	return dateToIso(new Date());
 }
 
 function formatDateShort(iso: string): string {
@@ -464,7 +464,7 @@ function MetricsTable({ rows }: { rows: MetricRow[] }) {
 							) : null}
 						</div>
 						<div className="text-right font-mono tabular-nums">
-							{r.absent ? '—' : formatHoursAndMinutes(r.regular)}
+							{r.absent ? '-' : formatHoursAndMinutes(r.regular)}
 						</div>
 						<div
 							className={cn(
@@ -472,10 +472,10 @@ function MetricsTable({ rows }: { rows: MetricRow[] }) {
 								r.overtime > 0 ? 'text-primary' : 'text-muted-foreground',
 							)}
 						>
-							{r.absent ? '—' : formatHoursAndMinutes(r.overtime)}
+							{r.absent ? '-' : formatHoursAndMinutes(r.overtime)}
 						</div>
 						<div className="text-right font-mono tabular-nums text-muted-foreground">
-							{r.absent ? '—' : formatHoursAndMinutes(r.nightDiff)}
+							{r.absent ? '-' : formatHoursAndMinutes(r.nightDiff)}
 						</div>
 						<div
 							className={cn(
@@ -483,7 +483,7 @@ function MetricsTable({ rows }: { rows: MetricRow[] }) {
 								r.lateMinutes > 0 ? 'text-amber-600' : 'text-muted-foreground',
 							)}
 						>
-							{r.absent ? '—' : formatMinutes(r.lateMinutes)}
+							{r.absent ? '-' : formatMinutes(r.lateMinutes)}
 						</div>
 						<div
 							className={cn(
@@ -493,7 +493,7 @@ function MetricsTable({ rows }: { rows: MetricRow[] }) {
 									: 'text-muted-foreground',
 							)}
 						>
-							{r.absent ? '—' : formatMinutes(r.undertimeMinutes)}
+							{r.absent ? '-' : formatMinutes(r.undertimeMinutes)}
 						</div>
 					</div>
 				))

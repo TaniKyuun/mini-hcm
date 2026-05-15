@@ -8,18 +8,6 @@ const LOCATIONS = [
 	'HQ · Floor 3',
 	'Remote',
 ] as const;
-const ROLES = [
-	'Account Exec',
-	'Operations Lead',
-	'Senior Engineer',
-	'People Specialist',
-	'Frontend Engineer',
-	'Sales Coordinator',
-	'Warehouse Tech',
-	'Logistics Operator',
-	'Account Manager',
-	'Engineering Manager',
-] as const;
 
 const DEPT_COLOR: Record<string, string> = {
 	Sales: 'bg-blue-500',
@@ -40,8 +28,6 @@ export type EmployeeDecoration = {
 	dept: string;
 	manager: string;
 	location: string;
-	role: string;
-	employeeId: string;
 	employment: 'Full-time' | 'Part-time';
 	deptColor: string;
 };
@@ -51,16 +37,12 @@ export function decorateEmployee(profile: UserProfile): EmployeeDecoration {
 	const dept = DEPARTMENTS[seed % DEPARTMENTS.length];
 	const manager = MANAGERS[(seed >> 3) % MANAGERS.length];
 	const location = LOCATIONS[(seed >> 5) % LOCATIONS.length];
-	const role = ROLES[(seed >> 7) % ROLES.length];
 	const employment: 'Full-time' | 'Part-time' =
 		(seed >> 9) % 10 < 8 ? 'Full-time' : 'Part-time';
-	const employeeId = String(10000 + (seed % 90000));
 	return {
 		dept,
 		manager,
 		location,
-		role,
-		employeeId,
 		employment,
 		deptColor: DEPT_COLOR[dept] ?? 'bg-zinc-500',
 	};

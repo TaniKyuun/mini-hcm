@@ -4,10 +4,13 @@ import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,
 	DEFAULT_TIMEZONE,
+	NOTIFICATIONS_COLLECTION,
 	USERS_COLLECTION,
 } from '../lib/constants';
 import { getFirebaseAuth, getFirestoreDb } from '../lib/firebase';
+import { isWorkingDay } from '../lib/workingDays';
 import { computeHours } from '../services/computeService';
+import { createNotification } from '../services/notificationService';
 import type {
 	AttendanceDoc,
 	EmploymentType,
@@ -37,6 +40,7 @@ const SEED_USERS: SeedUser[] = [
 		name: 'Ada Lovelace',
 		role: 'admin',
 		timezone: DEFAULT_TIMEZONE,
+		// Mon–Fri (default - `workingDays` omitted)
 		schedule: { start: '09:00', end: '18:00' },
 		location: 'On-Site',
 		employmentType: 'Full-time',
@@ -48,6 +52,7 @@ const SEED_USERS: SeedUser[] = [
 		name: 'Grace Hopper',
 		role: 'employee',
 		timezone: DEFAULT_TIMEZONE,
+		// Mon–Fri (default - `workingDays` omitted)
 		schedule: { start: '09:00', end: '18:00' },
 		location: 'Hybrid',
 		employmentType: 'Full-time',
@@ -59,7 +64,12 @@ const SEED_USERS: SeedUser[] = [
 		name: 'Linus Torvalds',
 		role: 'employee',
 		timezone: DEFAULT_TIMEZONE,
-		schedule: { start: '08:00', end: '17:00' },
+		// Six-day work week (Mon–Sat) to demo weekend support
+		schedule: {
+			start: '08:00',
+			end: '17:00',
+			workingDays: [1, 2, 3, 4, 5, 6],
+		},
 		location: 'Remote',
 		employmentType: 'Full-time',
 	},
@@ -70,6 +80,7 @@ const SEED_USERS: SeedUser[] = [
 		name: 'Margaret Hamilton',
 		role: 'employee',
 		timezone: DEFAULT_TIMEZONE,
+		// Mon–Fri (default)
 		schedule: { start: '10:00', end: '19:00' },
 		location: 'On-Site',
 		employmentType: 'Part-time',
@@ -81,7 +92,12 @@ const SEED_USERS: SeedUser[] = [
 		name: 'Alan Turing',
 		role: 'employee',
 		timezone: DEFAULT_TIMEZONE,
-		schedule: { start: '22:00', end: '06:00' },
+		// Tue–Sat overnight shift (off Sun + Mon)
+		schedule: {
+			start: '22:00',
+			end: '06:00',
+			workingDays: [2, 3, 4, 5, 6],
+		},
 		location: 'On-Site',
 		employmentType: 'Contractual',
 	},
@@ -177,11 +193,6 @@ function jitter(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function shouldSkipDay(date: string): boolean {
-	const day = new Date(`${date}T12:00:00Z`).getUTCDay();
-	return day === 0 || day === 6;
-}
-
 async function seedAttendanceForUser(user: SeedUser): Promise<number> {
 	const db = getFirestoreDb();
 	const [startH, startM] = parseHM(user.schedule.start);
@@ -192,15 +203,16 @@ async function seedAttendanceForUser(user: SeedUser): Promise<number> {
 
 	for (let offset = DAYS_OF_HISTORY; offset >= 1; offset -= 1) {
 		const date = pastDate(offset, user.timezone);
-		if (shouldSkipDay(date)) continue;
+		// Respect each user's working-days configuration (defaults to Mon–Fri).
+		if (!isWorkingDay(user.schedule, date)) continue;
 
 		const lateMin = jitter(-10, 25);
-		const overtimeMin = jitter(-15, 60);
 
 		const timeIn = localToUtcDate(date, startH, startM, user.timezone, lateMin);
 
+		// Punch-out lands exactly on the scheduled end (no overtime in seed data).
 		const outDate = nightShift ? addDaysToDateString(date, 1) : date;
-		const timeOut = localToUtcDate(outDate, endH, endM, user.timezone, overtimeMin);
+		const timeOut = localToUtcDate(outDate, endH, endM, user.timezone, 0);
 
 		const computed = computeHours({
 			timeIn,
@@ -237,6 +249,8 @@ async function seedAttendanceForUser(user: SeedUser): Promise<number> {
 					computed.nightDifferentialHours,
 			),
 			sessionsCount: 1,
+			firstTimeIn: Timestamp.fromDate(timeIn),
+			lastTimeOut: Timestamp.fromDate(timeOut),
 			updatedAt: FieldValue.serverTimestamp(),
 		};
 		await db
@@ -260,6 +274,48 @@ function round2(value: number): number {
 	return Math.round(value * 100) / 100;
 }
 
+/**
+ * Seeds a handful of `punch_edited` notifications addressed to each non-admin
+ * user, written by the seed admin. Useful for verifying the bell UI on first
+ * load - the admin sees no notifications, employees see a small unread set.
+ */
+async function seedNotifications(): Promise<number> {
+	const adminUid = SEED_USERS.find((u) => u.role === 'admin')?.uid;
+	if (!adminUid) return 0;
+
+	const employees = SEED_USERS.filter((u) => u.role !== 'admin');
+	let written = 0;
+	for (const emp of employees) {
+		// Two unread + one already-read sample so both states are visible.
+		await createNotification({
+			recipientUid: emp.uid,
+			actorUid: adminUid,
+			type: 'punch_edited',
+			title: 'Your time entry was edited',
+			body: 'Reason: Adjusted clock-in to 09:05 (admin verified).',
+		});
+		await createNotification({
+			recipientUid: emp.uid,
+			actorUid: adminUid,
+			type: 'punch_edited',
+			title: 'Your time entry was edited',
+			body: 'Reason: Approved overtime for yesterday.',
+		});
+		const db = getFirestoreDb();
+		await db.collection(NOTIFICATIONS_COLLECTION).add({
+			recipientUid: emp.uid,
+			actorUid: adminUid,
+			type: 'punch_edited',
+			read: true,
+			title: 'Your time entry was edited',
+			body: 'Reason: Fixed missing punch-out from last week.',
+			createdAt: FieldValue.serverTimestamp(),
+		});
+		written += 3;
+	}
+	return written;
+}
+
 async function resetSeedData(): Promise<void> {
 	const db = getFirestoreDb();
 	const auth = getFirebaseAuth();
@@ -273,10 +329,15 @@ async function resetSeedData(): Promise<void> {
 			.collection(DAILY_SUMMARY_COLLECTION)
 			.where('userId', '==', user.uid)
 			.get();
+		const notifications = await db
+			.collection(NOTIFICATIONS_COLLECTION)
+			.where('recipientUid', '==', user.uid)
+			.get();
 
 		const batch = db.batch();
 		for (const doc of attendance.docs) batch.delete(doc.ref);
 		for (const doc of summaries.docs) batch.delete(doc.ref);
+		for (const doc of notifications.docs) batch.delete(doc.ref);
 		batch.delete(db.collection(USERS_COLLECTION).doc(user.uid));
 		await batch.commit();
 
@@ -298,7 +359,7 @@ async function resetSeedData(): Promise<void> {
 		}
 	}
 	console.log(
-		`Reset complete — removed ${SEED_USERS.length} seed users and their data.`,
+		`Reset complete - removed ${SEED_USERS.length} seed users and their data.`,
 	);
 }
 
@@ -316,9 +377,12 @@ async function main(): Promise<void> {
 		await upsertProfile(user);
 		const days = await seedAttendanceForUser(user);
 		console.log(
-			`  · ${user.email} (${user.role}) — ${days} attendance days written`,
+			`  · ${user.email} (${user.role}) - ${days} attendance days written`,
 		);
 	}
+
+	const notifCount = await seedNotifications();
+	console.log(`Seeded ${notifCount} sample notifications.`);
 
 	console.log('\nDone. Sign-in credentials:');
 	for (const user of SEED_USERS) {

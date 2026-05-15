@@ -1,6 +1,5 @@
-import { BellIcon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useProfile } from '@/hooks/useProfile';
@@ -49,9 +48,7 @@ export function SiteHeader() {
 				/>
 				<h1 className="text-base font-medium">{title}</h1>
 				<div className="ml-auto flex items-center gap-1">
-					<Button variant="ghost" size="icon-sm" aria-label="Notifications">
-						<BellIcon />
-					</Button>
+					<NotificationBell />
 					<Separator
 						orientation="vertical"
 						className="mx-2 h-4 data-vertical:self-auto"

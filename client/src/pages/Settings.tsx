@@ -1,4 +1,5 @@
 import { signOut } from 'firebase/auth';
+import { BellIcon } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
+import { triggerTestNotification } from '@/services/adminService';
 
 type Preferences = {
 	theme: 'light' | 'dark' | 'system';
@@ -41,7 +44,26 @@ function applyTheme(theme: Preferences['theme']) {
 
 export function Settings() {
 	const { profile } = useProfile();
+	const { user } = useAuth();
 	const [prefs, setPrefs] = useState<Preferences>(loadPrefs);
+	const [demoBusy, setDemoBusy] = useState(false);
+	const [demoMessage, setDemoMessage] = useState<string | null>(null);
+
+	async function handleSendTestNotification() {
+		if (!user) return;
+		setDemoBusy(true);
+		setDemoMessage(null);
+		try {
+			await triggerTestNotification(user);
+			setDemoMessage('Sent - check the bell in the header.');
+		} catch (caught) {
+			setDemoMessage(
+				caught instanceof Error ? caught.message : 'Failed to send.',
+			);
+		} finally {
+			setDemoBusy(false);
+		}
+	}
 
 	useEffect(() => {
 		try {
@@ -143,13 +165,6 @@ export function Settings() {
 							onChange={() => {}}
 						/>
 						<PrefRow
-							title="Auto-approve overtime under 1h"
-							hint="Bypasses manager review for small spillovers."
-							checked={false}
-							disabled
-							onChange={() => {}}
-						/>
-						<PrefRow
 							title="Auto-clock-out at 23:59"
 							hint="Closes sessions left open past midnight."
 							checked
@@ -160,11 +175,44 @@ export function Settings() {
 				</Card>
 			) : null}
 
+			{isAdmin ? (
+				<Card className="gap-0 p-0">
+					<div className="border-b px-6 py-4">
+						<h2 className="flex items-center gap-2 text-sm font-semibold">
+							Notification demo
+							<Badge variant="outline" className="text-[10px]">
+								admin
+							</Badge>
+						</h2>
+						<p className="text-xs text-muted-foreground">
+							Sends a test notification to yourself so you can verify the bell
+							icon updates in real time.
+						</p>
+					</div>
+					<div className="flex items-center gap-3 px-6 py-5">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => void handleSendTestNotification()}
+							disabled={demoBusy || !user}
+						>
+							<BellIcon />
+							{demoBusy ? 'Sending…' : 'Send test notification'}
+						</Button>
+						{demoMessage ? (
+							<span className="text-xs text-muted-foreground">
+								{demoMessage}
+							</span>
+						) : null}
+					</div>
+				</Card>
+			) : null}
+
 			<Card className="gap-0 p-0">
 				<div className="border-b px-6 py-4">
 					<h2 className="text-sm font-semibold">Account</h2>
 					<p className="text-xs text-muted-foreground">
-						Signed in as {profile?.email ?? '—'}
+						Signed in as {profile?.email ?? '-'}
 					</p>
 				</div>
 				<div className="flex items-center gap-3 px-6 py-5">
