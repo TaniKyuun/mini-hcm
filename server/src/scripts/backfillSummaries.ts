@@ -1,7 +1,7 @@
-import { DAILY_SUMMARY_COLLECTION } from '../lib/constants';
-import { getFirestoreDb } from '../lib/firebase';
-import { writeDailySummary } from '../services/summaryService';
-import type { DailySummaryDoc } from '../types/models';
+import { DAILY_SUMMARY_COLLECTION } from '../lib/constants.js';
+import { getFirestoreDb } from '../lib/firebase.js';
+import { writeDailySummary } from '../services/summaryService.js';
+import type { DailySummaryDoc } from '../types/models.js';
 
 /**
  * One-off backfill: re-run writeDailySummary for every existing dailySummary

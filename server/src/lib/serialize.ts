@@ -6,7 +6,7 @@ import type {
 	DailySummaryDoc,
 	NotificationDoc,
 	UserProfile,
-} from '../types/models';
+} from '../types/models.js';
 
 function tsToIso(value: Timestamp | null | undefined): string | null {
 	if (!value) return null;

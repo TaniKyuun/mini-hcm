@@ -2,16 +2,16 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import {
 	ATTENDANCE_COLLECTION,
 	EDIT_REQUESTS_COLLECTION,
-} from '../lib/constants';
-import { getFirestoreDb } from '../lib/firebase';
+} from '../lib/constants.js';
+import { getFirestoreDb } from '../lib/firebase.js';
 import type {
 	AttendanceDoc,
 	AttendanceEditRequestDoc,
 	EditRequestStatus,
-} from '../types/models';
-import { adminUpdateAttendance, NotFoundError } from './attendanceService';
-import { createNotification } from './notificationService';
-import { ValidationError } from './userService';
+} from '../types/models.js';
+import { adminUpdateAttendance, NotFoundError } from './attendanceService.js';
+import { createNotification } from './notificationService.js';
+import { ValidationError } from './userService.js';
 
 const REASON_MAX_LENGTH = 500;
 const ADMIN_NOTE_MAX_LENGTH = 500;

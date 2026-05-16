@@ -4,40 +4,40 @@ import {
 	serializeDailySummary,
 	serializeEditRequest,
 	serializeProfile,
-} from '../lib/serialize';
-import { authenticateFirebase } from '../middleware/authenticateFirebase';
-import { type AdminLocals, requireAdmin } from '../middleware/requireAdmin';
+} from '../lib/serialize.js';
+import { authenticateFirebase } from '../middleware/authenticateFirebase.js';
+import { type AdminLocals, requireAdmin } from '../middleware/requireAdmin.js';
 import {
 	adminListAttendance,
 	adminUpdateAttendance,
 	listAttendanceOnDate,
 	NotFoundError,
-} from '../services/attendanceService';
+} from '../services/attendanceService.js';
 import {
 	approveEditRequest,
 	listEditRequests,
 	rejectEditRequest,
-} from '../services/editRequestService';
-import { createNotification } from '../services/notificationService';
+} from '../services/editRequestService.js';
+import { createNotification } from '../services/notificationService.js';
 import {
 	buildWeekDates,
 	listAllDailySummariesInRange,
 	listAllDailySummariesOnDate,
-} from '../services/summaryService';
+} from '../services/summaryService.js';
 import {
 	adminUpdateProfile,
 	createEmployeeProfile,
 	EmailAlreadyExistsError,
 	listAllProfiles,
 	ValidationError,
-} from '../services/userService';
+} from '../services/userService.js';
 import type {
 	EditRequestStatus,
 	EmploymentType,
 	UserLocation,
 	UserRole,
 	UserSchedule,
-} from '../types/models';
+} from '../types/models.js';
 
 const getEmployees: RequestHandler<
 	Record<string, never>,

@@ -1,5 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
-import type { ComputedAttendance, UserSchedule } from '../types/models';
+import type { ComputedAttendance, UserSchedule } from '../types/models.js';
 
 export type ComputeHoursInput = {
 	timeIn: Date;

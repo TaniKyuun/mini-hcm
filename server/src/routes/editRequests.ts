@@ -1,15 +1,15 @@
 import { type RequestHandler, Router } from 'express';
-import { serializeEditRequest } from '../lib/serialize';
+import { serializeEditRequest } from '../lib/serialize.js';
 import {
 	type AuthenticatedLocals,
 	authenticateFirebase,
-} from '../middleware/authenticateFirebase';
-import { NotFoundError } from '../services/attendanceService';
+} from '../middleware/authenticateFirebase.js';
+import { NotFoundError } from '../services/attendanceService.js';
 import {
 	createEditRequest,
 	listEditRequestsForUser,
-} from '../services/editRequestService';
-import { ValidationError } from '../services/userService';
+} from '../services/editRequestService.js';
+import { ValidationError } from '../services/userService.js';
 
 type CreateEditRequestBody = {
 	attendanceId?: string;

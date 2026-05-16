@@ -1,11 +1,11 @@
 import { FieldValue, type Timestamp } from 'firebase-admin/firestore';
-import { NOTIFICATIONS_COLLECTION } from '../lib/constants';
-import { getFirestoreDb } from '../lib/firebase';
+import { NOTIFICATIONS_COLLECTION } from '../lib/constants.js';
+import { getFirestoreDb } from '../lib/firebase.js';
 import type {
 	NotificationDoc,
 	NotificationMetadata,
 	NotificationType,
-} from '../types/models';
+} from '../types/models.js';
 
 export async function createNotification(input: {
 	recipientUid: string;

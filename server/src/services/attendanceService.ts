@@ -1,17 +1,17 @@
 import { formatInTimeZone } from 'date-fns-tz';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { ATTENDANCE_COLLECTION } from '../lib/constants';
-import { getFirestoreDb } from '../lib/firebase';
+import { ATTENDANCE_COLLECTION } from '../lib/constants.js';
+import { getFirestoreDb } from '../lib/firebase.js';
 import type {
 	AttendanceDoc,
 	AttendanceEdit,
 	ComputedAttendance,
 	UserProfile,
-} from '../types/models';
-import { computeHours } from './computeService';
-import { notifyEmployeeOfEdit } from './notificationService';
-import { writeDailySummary } from './summaryService';
-import { getUserProfile, ValidationError } from './userService';
+} from '../types/models.js';
+import { computeHours } from './computeService.js';
+import { notifyEmployeeOfEdit } from './notificationService.js';
+import { writeDailySummary } from './summaryService.js';
+import { getUserProfile, ValidationError } from './userService.js';
 
 export type AttendanceWithId = AttendanceDoc & { id: string };
 

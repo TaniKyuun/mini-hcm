@@ -2,7 +2,7 @@ import { type RequestHandler, Router } from 'express';
 import {
 	type AuthenticatedLocals,
 	authenticateFirebase,
-} from '../middleware/authenticateFirebase';
+} from '../middleware/authenticateFirebase.js';
 
 type ProtectedApiResponse = {
 	message: string;

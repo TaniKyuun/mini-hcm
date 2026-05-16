@@ -1,4 +1,4 @@
-import type { UserSchedule } from '../types/models';
+import type { UserSchedule } from '../types/models.js';
 
 /** Mon (1) through Fri (5). */
 export const DEFAULT_WORKING_DAYS: readonly number[] = [1, 2, 3, 4, 5];

@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import type { DecodedIdToken } from 'firebase-admin/auth';
-import { getFirebaseAuth } from '../lib/firebase';
+import { getFirebaseAuth } from '../lib/firebase.js';
 
 export type AuthenticatedLocals = {
 	firebaseUser: DecodedIdToken;

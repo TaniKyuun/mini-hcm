@@ -6,13 +6,13 @@ import {
 import {
 	ATTENDANCE_COLLECTION,
 	DAILY_SUMMARY_COLLECTION,
-} from '../lib/constants';
-import { getFirestoreDb } from '../lib/firebase';
+} from '../lib/constants.js';
+import { getFirestoreDb } from '../lib/firebase.js';
 import type {
 	AttendanceDoc,
 	ComputedAttendance,
 	DailySummaryDoc,
-} from '../types/models';
+} from '../types/models.js';
 
 export async function writeDailySummary(
 	db: Firestore,

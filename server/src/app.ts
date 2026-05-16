@@ -1,13 +1,13 @@
 import cors from 'cors';
 import express from 'express';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { adminRouter } from './routes/admin';
-import { apiRouter } from './routes/api';
-import { attendanceRouter } from './routes/attendance';
-import { editRequestsRouter } from './routes/editRequests';
-import { notificationsRouter } from './routes/notifications';
-import { summaryRouter } from './routes/summary';
-import { usersRouter } from './routes/users';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { adminRouter } from './routes/admin.js';
+import { apiRouter } from './routes/api.js';
+import { attendanceRouter } from './routes/attendance.js';
+import { editRequestsRouter } from './routes/editRequests.js';
+import { notificationsRouter } from './routes/notifications.js';
+import { summaryRouter } from './routes/summary.js';
+import { usersRouter } from './routes/users.js';
 
 export function createApp() {
 	const app = express();

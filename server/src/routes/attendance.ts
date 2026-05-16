@@ -1,9 +1,9 @@
 import { type RequestHandler, Router } from 'express';
-import { serializeAttendance } from '../lib/serialize';
+import { serializeAttendance } from '../lib/serialize.js';
 import {
 	type AuthenticatedLocals,
 	authenticateFirebase,
-} from '../middleware/authenticateFirebase';
+} from '../middleware/authenticateFirebase.js';
 import {
 	AttendanceConflictError,
 	findActiveSession,
@@ -11,8 +11,8 @@ import {
 	NotFoundError,
 	punchIn,
 	punchOut,
-} from '../services/attendanceService';
-import { getOrCreateUserProfile } from '../services/userService';
+} from '../services/attendanceService.js';
+import { getOrCreateUserProfile } from '../services/userService.js';
 
 const getActive: RequestHandler<
 	Record<string, never>,
