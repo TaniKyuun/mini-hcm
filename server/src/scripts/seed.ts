@@ -10,17 +10,17 @@ import {
 	DEFAULT_TIMEZONE,
 	NOTIFICATIONS_COLLECTION,
 	USERS_COLLECTION,
-} from '../lib/constants';
-import { getFirebaseAuth, getFirestoreDb } from '../lib/firebase';
-import { isWorkingDay } from '../lib/workingDays';
-import { computeHours } from '../services/computeService';
+} from '../lib/constants.js';
+import { getFirebaseAuth, getFirestoreDb } from '../lib/firebase.js';
+import { isWorkingDay } from '../lib/workingDays.js';
+import { computeHours } from '../services/computeService.js';
 import type {
 	AttendanceDoc,
 	EmploymentType,
 	UserLocation,
 	UserRole,
 	UserSchedule,
-} from '../types/models';
+} from '../types/models.js';
 
 type SeedUser = {
 	uid: string;

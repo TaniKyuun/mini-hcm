@@ -1,14 +1,14 @@
 import { type RequestHandler, Router } from 'express';
-import { serializeProfile } from '../lib/serialize';
+import { serializeProfile } from '../lib/serialize.js';
 import {
 	type AuthenticatedLocals,
 	authenticateFirebase,
-} from '../middleware/authenticateFirebase';
+} from '../middleware/authenticateFirebase.js';
 import {
 	getOrCreateUserProfile,
 	updateOwnProfile,
 	ValidationError,
-} from '../services/userService';
+} from '../services/userService.js';
 
 const getMe: RequestHandler<
 	Record<string, never>,

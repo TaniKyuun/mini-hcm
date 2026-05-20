@@ -1,12 +1,12 @@
 import { type RequestHandler, Router } from 'express';
-import { NOTIFICATIONS_COLLECTION } from '../lib/constants';
-import { getFirestoreDb } from '../lib/firebase';
-import { serializeNotification } from '../lib/serialize';
+import { NOTIFICATIONS_COLLECTION } from '../lib/constants.js';
+import { getFirestoreDb } from '../lib/firebase.js';
+import { serializeNotification } from '../lib/serialize.js';
 import {
 	type AuthenticatedLocals,
 	authenticateFirebase,
-} from '../middleware/authenticateFirebase';
-import type { NotificationDoc } from '../types/models';
+} from '../middleware/authenticateFirebase.js';
+import type { NotificationDoc } from '../types/models.js';
 
 const LIST_LIMIT = 20;
 

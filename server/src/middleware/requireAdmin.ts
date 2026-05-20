@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
-import { getUserProfile } from '../services/userService';
-import type { AuthenticatedLocals } from './authenticateFirebase';
+import { getUserProfile } from '../services/userService.js';
+import type { AuthenticatedLocals } from './authenticateFirebase.js';
 
 export type AdminLocals = AuthenticatedLocals & {
 	isAdmin: true;

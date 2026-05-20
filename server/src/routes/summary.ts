@@ -1,15 +1,15 @@
 import { formatInTimeZone } from 'date-fns-tz';
 import { type RequestHandler, Router } from 'express';
-import { serializeDailySummary } from '../lib/serialize';
+import { serializeDailySummary } from '../lib/serialize.js';
 import {
 	type AuthenticatedLocals,
 	authenticateFirebase,
-} from '../middleware/authenticateFirebase';
+} from '../middleware/authenticateFirebase.js';
 import {
 	readDailySummary,
 	readWeeklySummaries,
-} from '../services/summaryService';
-import { getOrCreateUserProfile } from '../services/userService';
+} from '../services/summaryService.js';
+import { getOrCreateUserProfile } from '../services/userService.js';
 
 type DailyQuery = {
 	date?: string;

@@ -3,15 +3,15 @@ import {
 	DEFAULT_SCHEDULE,
 	DEFAULT_TIMEZONE,
 	USERS_COLLECTION,
-} from '../lib/constants';
-import { getFirebaseAuth, getFirestoreDb } from '../lib/firebase';
+} from '../lib/constants.js';
+import { getFirebaseAuth, getFirestoreDb } from '../lib/firebase.js';
 import type {
 	EmploymentType,
 	UserLocation,
 	UserProfile,
 	UserRole,
 	UserSchedule,
-} from '../types/models';
+} from '../types/models.js';
 
 export class EmailAlreadyExistsError extends Error {
 	constructor(message: string) {
