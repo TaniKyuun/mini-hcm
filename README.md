@@ -2,6 +2,18 @@
 
 A lightweight Human Capital Management (HCM) app for employee time tracking. Built as a monorepo with a React frontend and an Express.js backend.
 
+## Screenshots
+
+| Area            | Preview                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Login           | <img src=".docs/images/Login%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Login screen" width="640" />                       |
+| Punch in/out    | <img src=".docs/images/Punch%20in-out%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Punch in and out screen" width="640" />   |
+| Attendance      | <img src=".docs/images/Attentance%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Attendance screen" width="640" />             |
+| Employees       | <img src=".docs/images/Employees%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Employees screen" width="640" />               |
+| Edit requests   | <img src=".docs/images/Edit%20Requests%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Edit requests screen" width="640" />     |
+| Reports         | <img src=".docs/images/Reports%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Reports screen" width="640" />                   |
+| Admin dashboard | <img src=".docs/images/Admin%20Dashboard%20-%20Mini%20HCM%20Time%20Tracking.png" alt="Admin dashboard screen" width="640" /> |
+
 ## Stack
 
 - **Frontend** - React 19, Vite 8, Tailwind CSS 4, TypeScript
